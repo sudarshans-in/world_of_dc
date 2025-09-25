@@ -1,0 +1,113 @@
+package org.dcoffice.cachar.service;
+
+import org.dcoffice.cachar.entity.Citizen;
+import org.dcoffice.cachar.exception.CitizenNotFoundException;
+import org.dcoffice.cachar.exception.InvalidOTPException;
+import org.dcoffice.cachar.repository.CitizenRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+@Service
+@Transactional
+public class CitizenService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CitizenService.class);
+
+    @Autowired
+    private CitizenRepository citizenRepository;
+
+    @Autowired
+    private OTPService otpService;
+
+    public Citizen registerOrUpdateCitizen(Citizen citizen) {
+        Optional<Citizen> existingCitizen = citizenRepository.findByMobileNumber(citizen.getMobileNumber());
+
+        if (existingCitizen.isPresent()) {
+            Citizen existing = existingCitizen.get();
+            existing.setName(citizen.getName());
+            existing.setEmail(citizen.getEmail());
+            existing.setAddress(citizen.getAddress());
+            existing.setAadharNumber(citizen.getAadharNumber());
+            logger.info("Updated citizen profile for mobile number: {}", citizen.getMobileNumber());
+            return citizenRepository.save(existing);
+        } else {
+            logger.info("Registered new citizen with mobile number: {}", citizen.getMobileNumber());
+            return citizenRepository.save(citizen);
+        }
+    }
+
+    public void sendOTP(String mobileNumber) {
+        Optional<Citizen> citizenOpt = citizenRepository.findByMobileNumber(mobileNumber);
+        Citizen citizen;
+
+        if (citizenOpt.isPresent()) {
+            citizen = citizenOpt.get();
+        } else {
+            citizen = new Citizen();
+            citizen.setMobileNumber(mobileNumber);
+        }
+
+        String otp = otpService.generateOTP();
+        citizen.setOtp(otp);
+        citizen.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+        citizen.setVerified(false);
+
+        citizenRepository.save(citizen);
+        otpService.sendOTP(mobileNumber, otp);
+
+        logger.info("OTP sent successfully to mobile number: {}", mobileNumber);
+    }
+
+    public boolean verifyOTP(String mobileNumber, String otp) {
+        if (!otpService.isValidOTPFormat(otp)) {
+            throw new InvalidOTPException("Invalid OTP format");
+        }
+
+        Optional<Citizen> citizenOpt = citizenRepository.findByMobileNumber(mobileNumber);
+
+        if (citizenOpt.isPresent()) {
+            Citizen citizen = citizenOpt.get();
+            if (citizen.getOtp() != null &&
+                    citizen.getOtp().equals(otp) &&
+                    citizen.getOtpExpiry() != null &&
+                    citizen.getOtpExpiry().isAfter(LocalDateTime.now())) {
+
+                citizen.setVerified(true);
+                citizen.setOtp(null);
+                citizen.setOtpExpiry(null);
+                citizenRepository.save(citizen);
+
+                logger.info("OTP verified successfully for mobile number: {}", mobileNumber);
+                return true;
+            }
+        }
+
+        logger.warn("OTP verification failed for mobile number: {}", mobileNumber);
+        return false;
+    }
+
+    public Optional<Citizen> findByMobileNumber(String mobileNumber) {
+        return citizenRepository.findByMobileNumber(mobileNumber);
+    }
+
+    public Citizen getCitizenByMobileNumber(String mobileNumber) {
+        return citizenRepository.findByMobileNumber(mobileNumber)
+                .orElseThrow(() -> new CitizenNotFoundException("Citizen not found with mobile number: " + mobileNumber));
+    }
+
+    public boolean isCitizenVerified(String mobileNumber) {
+        return citizenRepository.findByMobileNumber(mobileNumber)
+                .map(Citizen::isVerified)
+                .orElse(false);
+    }
+
+    public Long getTotalVerifiedCitizens() {
+        return citizenRepository.countVerifiedCitizens();
+    }
+}

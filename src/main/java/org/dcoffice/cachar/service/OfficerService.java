@@ -50,7 +50,7 @@ public class OfficerService {
     /**
      * Approve an officer (admin action)
      */
-    public Officer approveOfficer(Long officerId, String approverEmployeeId, org.dcoffice.cachar.entity.OfficerRole assignedRole) {
+    public Officer approveOfficer(String officerId, String approverEmployeeId, org.dcoffice.cachar.entity.OfficerRole assignedRole) {
         Officer officer = getOfficerById(officerId);
         officer.setApproved(true);
         if (assignedRole != null) officer.setRole(assignedRole);
@@ -75,12 +75,12 @@ public class OfficerService {
         return officer;
     }
 
-    public Optional<Officer> findById(Long id) {
-        return officerRepository.findById(String.valueOf(id));
+    public Optional<Officer> findById(String id) {
+        return officerRepository.findById(id);
     }
 
-    public Officer getOfficerById(Long id) {
-        return officerRepository.findById(String.valueOf(id))
+    public Officer getOfficerById(String id) {
+        return officerRepository.findById(id)
                 .orElseThrow(() -> new OfficerNotFoundException("Officer not found with ID: " + id));
     }
 
@@ -101,7 +101,7 @@ public class OfficerService {
         return officerRepository.findByIsApprovedFalseAndIsActiveTrue();
     }
 
-    public void rejectOfficer(Long officerId, String approverEmployeeId) {
+    public void rejectOfficer(String officerId, String approverEmployeeId) {
         Officer officer = getOfficerById(officerId);
         officer.setActive(false);
         officerRepository.save(officer);
@@ -117,7 +117,7 @@ public class OfficerService {
     }
 
     public Officer updateOfficer(Officer officer) {
-        Officer existingOfficer = getOfficerById(Long.valueOf(officer.getId()));
+        Officer existingOfficer = getOfficerById(officer.getId());
 
         existingOfficer.setName(officer.getName());
         existingOfficer.setEmail(officer.getEmail());
@@ -129,14 +129,14 @@ public class OfficerService {
         return officerRepository.save(existingOfficer);
     }
 
-    public void deactivateOfficer(Long officerId) {
+    public void deactivateOfficer(String officerId) {
         Officer officer = getOfficerById(officerId);
         officer.setActive(false);
         officerRepository.save(officer);
         logger.info("Deactivated officer: {} with ID: {}", officer.getName(), officerId);
     }
 
-    public void activateOfficer(Long officerId) {
+    public void activateOfficer(String officerId) {
         Officer officer = getOfficerById(officerId);
         officer.setActive(true);
         officerRepository.save(officer);

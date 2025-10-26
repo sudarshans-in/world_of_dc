@@ -1,5 +1,7 @@
 package org.dcoffice.cachar.config;
 
+import org.dcoffice.cachar.service.JwtService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
 /**
@@ -28,6 +31,9 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Autowired
+    private JwtService jwtService;
 
     /**
      * Configure HTTP Security
@@ -78,9 +84,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // Static resources
                 .antMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
 
+                // ===== PUBLIC OFFICER ENDPOINTS (No Authentication Required) =====
+                
+                // Officer signup and login (public)
+                .antMatchers(HttpMethod.POST, "/api/officer/signup").permitAll()
+                .antMatchers(HttpMethod.POST, "/api/officer/login").permitAll()
+
                 // ===== PROTECTED ENDPOINTS (Authentication Required) =====
 
-                // Officer management endpoints
+                // Other officer management endpoints (require authentication)
                 .antMatchers("/api/officer/**").authenticated()
 
                 // Administrative complaint endpoints
@@ -117,6 +129,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 //                                .includeSubdomains(true)
 //                        )
                 )
+
+                // Add JWT authentication filter
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
 
                 // Configure HTTP Basic Authentication (replace with JWT in production)
                 .httpBasic()
@@ -166,6 +181,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private boolean isDevelopmentProfile() {
         String activeProfiles = System.getProperty("spring.profiles.active", "");
         return activeProfiles.contains("dev") || activeProfiles.contains("local");
+    }
+
+    /**
+     * Create JWT authentication filter bean
+     */
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtService);
     }
 }
 

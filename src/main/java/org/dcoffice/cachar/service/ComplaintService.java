@@ -70,7 +70,7 @@ public class ComplaintService {
         return savedComplaint;
     }
 
-    public Complaint assignComplaint(Long complaintId, Long officerId, String remarks, Officer assignedBy) {
+    public Complaint assignComplaint(Long complaintId, String officerId, String remarks, Officer assignedBy) {
         Complaint complaint = getComplaintById(complaintId);
         Officer officer = officerService.getOfficerById(officerId);
 

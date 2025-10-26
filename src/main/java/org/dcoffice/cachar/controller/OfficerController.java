@@ -4,6 +4,7 @@ import org.dcoffice.cachar.dto.ApiResponse;
 import org.dcoffice.cachar.dto.AssignComplaintRequest;
 import org.dcoffice.cachar.dto.OfficerLoginRequest;
 import org.dcoffice.cachar.dto.OfficerApproveRequest;
+import org.dcoffice.cachar.dto.OfficerUpdateRequest;
 import org.dcoffice.cachar.entity.*;
 import org.dcoffice.cachar.service.ComplaintService;
 import org.dcoffice.cachar.service.OfficerService;
@@ -12,12 +13,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/officer")
@@ -34,6 +37,12 @@ public class OfficerController {
 
     @Autowired
     private org.dcoffice.cachar.service.JwtService jwtService;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private org.dcoffice.cachar.repository.OfficerRepository officerRepository;
 
     @PostMapping("/assign-complaint")
     @PreAuthorize("hasRole('DISTRICT_COMMISSIONER') or hasRole('ADDITIONAL_DISTRICT_COMMISSIONER')")
@@ -80,7 +89,7 @@ public class OfficerController {
             Long complaintId = Long.valueOf(request.get("complaintId").toString());
             ComplaintStatus newStatus = ComplaintStatus.valueOf(request.get("status").toString());
             String remarks = request.get("remarks").toString();
-            Long officerId = Long.valueOf(request.get("officerId").toString());
+            String officerId = request.get("officerId").toString();
 
             Officer currentOfficer = officerService.getOfficerById(officerId);
 
@@ -161,6 +170,10 @@ public class OfficerController {
             java.util.Map<String, String> data = new java.util.HashMap<>();
             data.put("token", token);
             data.put("officerId", officer.getId());
+            data.put("name", officer.getName());
+            data.put("email", officer.getEmail());
+            data.put("employeeId", officer.getEmployeeId());
+            data.put("role", officer.getRole() != null ? officer.getRole().name() : "OFFICER");
             return ResponseEntity.ok(ApiResponse.success("Login successful", data));
         } catch (Exception e) {
             logger.warn("Officer login failed for {}: {}", request.getEmployeeId(), e.getMessage());
@@ -170,9 +183,9 @@ public class OfficerController {
 
     @PostMapping("/approve/{officerId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DISTRICT_COMMISSIONER')")
-    public ResponseEntity<ApiResponse<Officer>> approveOfficer(@PathVariable Long officerId, @RequestBody OfficerApproveRequest request) {
+    public ResponseEntity<ApiResponse<Officer>> approveOfficer(@PathVariable String officerId, @RequestBody OfficerApproveRequest request) {
         try {
-            Officer updated = officerService.approveOfficer(officerId, request.getApproverEmployeeId(), request.getRole());
+            Officer updated = officerService.approveOfficer(officerId, request.getApproverEmployeeId(), request.getRoleAsEnum());
             return ResponseEntity.ok(ApiResponse.success("Officer approved successfully", updated));
         } catch (Exception e) {
             logger.error("Failed to approve officer {}: {}", officerId, e.getMessage());
@@ -206,13 +219,58 @@ public class OfficerController {
 
     @PostMapping("/reject/{officerId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('DISTRICT_COMMISSIONER')")
-    public ResponseEntity<ApiResponse<Void>> rejectOfficer(@PathVariable Long officerId, @RequestBody OfficerApproveRequest request) {
+    public ResponseEntity<ApiResponse<Void>> rejectOfficer(@PathVariable String officerId, @RequestBody OfficerApproveRequest request) {
         try {
             officerService.rejectOfficer(officerId, request.getApproverEmployeeId());
             return ResponseEntity.ok(ApiResponse.success("Officer rejected"));
         } catch (Exception e) {
             logger.error("Failed to reject officer {}: {}", officerId, e.getMessage());
             return ResponseEntity.badRequest().body(ApiResponse.error("Rejection failed: " + e.getMessage()));
+        }
+    }
+
+    // Get current officer profile
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<Officer>> getCurrentOfficerProfile(Authentication authentication) {
+        try {
+            String officerId = authentication.getName();
+            Officer officer = officerService.getOfficerById(officerId);
+            return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", officer));
+        } catch (Exception e) {
+            logger.error("Failed to get officer profile: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve profile: " + e.getMessage()));
+        }
+    }
+
+    // Update officer profile
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<Officer>> updateOfficerProfile(@RequestBody OfficerUpdateRequest request, Authentication authentication) {
+        try {
+            String officerId = authentication.getName();
+            Officer existingOfficer = officerService.getOfficerById(officerId);
+            
+            // Update only the allowed fields
+            if (request.getName() != null && !request.getName().trim().isEmpty()) {
+                existingOfficer.setName(request.getName().trim());
+            }
+            if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+                existingOfficer.setEmail(request.getEmail().trim());
+            }
+            if (request.getMobileNumber() != null && !request.getMobileNumber().trim().isEmpty()) {
+                existingOfficer.setMobileNumber(request.getMobileNumber().trim());
+            }
+            if (request.getDesignation() != null && !request.getDesignation().trim().isEmpty()) {
+                existingOfficer.setDesignation(request.getDesignation().trim());
+            }
+            if (request.getDepartment() != null && !request.getDepartment().trim().isEmpty()) {
+                existingOfficer.setDepartment(request.getDepartment().trim());
+            }
+            
+            Officer updatedOfficer = officerService.updateOfficer(existingOfficer);
+            return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", updatedOfficer));
+        } catch (Exception e) {
+            logger.error("Failed to update officer profile: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error("Profile update failed: " + e.getMessage()));
         }
     }
 }

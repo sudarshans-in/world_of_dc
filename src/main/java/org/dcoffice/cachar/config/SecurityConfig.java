@@ -66,8 +66,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/api/citizen/register").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/citizen/profile/**").permitAll()
 
-                // Public complaint endpoints
-                .antMatchers(HttpMethod.POST, "/api/complaints/create").permitAll()
+                // Public complaint endpoints (citizens can track their complaints)
                 .antMatchers(HttpMethod.GET, "/api/complaints/track/**").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/complaints/citizen/**").permitAll()
 
@@ -95,7 +94,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // Other officer management endpoints (require authentication)
                 .antMatchers("/api/officer/**").authenticated()
 
-                // Administrative complaint endpoints
+                // Administrative complaint endpoints (require officer authentication)
+                .antMatchers(HttpMethod.POST, "/api/complaints/create").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/unassigned").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/recent/**").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/category/**").authenticated()

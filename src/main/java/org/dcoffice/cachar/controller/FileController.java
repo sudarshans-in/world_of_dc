@@ -1,8 +1,10 @@
 package org.dcoffice.cachar.controller;
 
 import org.dcoffice.cachar.dto.ApiResponse;
+import org.dcoffice.cachar.entity.Complaint;
 import org.dcoffice.cachar.entity.ComplaintDocument;
 import org.dcoffice.cachar.service.FileStorageService;
+import org.dcoffice.cachar.service.ComplaintService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/files")
@@ -24,11 +27,19 @@ public class FileController {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private ComplaintService complaintService;
+
     @GetMapping("/complaint/{complaintId}")
     public ResponseEntity<ApiResponse<List<ComplaintDocument>>> getComplaintFiles(@PathVariable Long complaintId) {
         try {
-            List<ComplaintDocument> documents = fileStorageService.getComplaintDocuments(complaintId);
-            return ResponseEntity.ok(ApiResponse.success("Complaint files retrieved", documents));
+            Optional<Complaint> complaintOpt = complaintService.findByComplaintId(complaintId);
+            if (complaintOpt.isPresent()) {
+                List<ComplaintDocument> documents = fileStorageService.getComplaintDocuments(complaintOpt.get().getId());
+                return ResponseEntity.ok(ApiResponse.success("Complaint files retrieved", documents));
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             logger.error("Failed to get files for complaint {}: {}", complaintId, e.getMessage());
             return ResponseEntity.badRequest()

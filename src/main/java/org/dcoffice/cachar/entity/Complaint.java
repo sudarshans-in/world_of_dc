@@ -47,6 +47,7 @@ public class Complaint {
     @Indexed
     private String assignedToId;
     private String assignedById;
+    private String createdById; // Track who created the complaint
 
     private String assignmentRemarks;
     private LocalDateTime assignedAt;
@@ -112,6 +113,9 @@ public class Complaint {
 
     public String getAssignedById() { return assignedById; }
     public void setAssignedById(String assignedById) { this.assignedById = assignedById; }
+
+    public String getCreatedById() { return createdById; }
+    public void setCreatedById(String createdById) { this.createdById = createdById; }
 
     public String getAssignmentRemarks() { return assignmentRemarks; }
     public void setAssignmentRemarks(String assignmentRemarks) { this.assignmentRemarks = assignmentRemarks; }

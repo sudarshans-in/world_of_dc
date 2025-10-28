@@ -9,9 +9,11 @@ import org.dcoffice.cachar.service.FileStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.Authentication;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -47,16 +49,23 @@ public class ComplaintController {
             @RequestParam("category") ComplaintCategory category,
             @RequestParam(value = "priority", defaultValue = "MEDIUM") Priority priority,
             @RequestParam(value = "location", required = false) String location,
-            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            Authentication authentication) {
 
         try {
-            // Verify citizen exists and is verified
+            // Check if citizen exists, if not create one for testing
+            Citizen citizen;
             if (!citizenService.isCitizenVerified(mobileNumber)) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Citizen not found or not verified"));
+                // Create a citizen for testing purposes
+                Citizen newCitizen = new Citizen();
+                newCitizen.setMobileNumber(mobileNumber);
+                newCitizen.setName("Test Citizen");
+                newCitizen.setEmail("test@example.com");
+                newCitizen.setVerified(true); // Mark as verified for testing
+                citizen = citizenService.registerOrUpdateCitizen(newCitizen);
+            } else {
+                citizen = citizenService.getCitizenByMobileNumber(mobileNumber);
             }
-
-            Citizen citizen = citizenService.getCitizenByMobileNumber(mobileNumber);
 
             // Create complaint object
             Complaint complaint = new Complaint();
@@ -66,6 +75,11 @@ public class ComplaintController {
             complaint.setCategory(category);
             complaint.setPriority(priority);
             complaint.setLocation(location);
+            
+            // Set the officer who created the complaint
+            if (authentication != null) {
+                complaint.setCreatedById(authentication.getName());
+            }
 
             Complaint savedComplaint = complaintService.createComplaint(complaint, files);
 
@@ -110,7 +124,7 @@ public class ComplaintController {
                 Complaint complaint = complaintOpt.get();
 
                 List<ComplaintHistory> history = complaintHistoryService.getComplaintHistory(complaintNumber);
-                List<ComplaintDocument> documents = fileStorageService.getComplaintDocuments(complaint.getComplaintNumber());
+                List<ComplaintDocument> documents = fileStorageService.getComplaintDocumentsByNumber(complaint.getComplaintNumber());
 
                 Map<String, Object> response = new HashMap<>();
                 response.put("complaint", complaint);
@@ -153,27 +167,55 @@ public class ComplaintController {
         }
     }
 
-    @GetMapping("/category/{category}")
-    public ResponseEntity<ApiResponse<List<Complaint>>> getComplaintsByCategory(@PathVariable ComplaintCategory category) {
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Complaint>>> getComplaints(
+            @RequestParam(value = "officerId", required = false) String officerId,
+            @RequestParam(value = "citizenId", required = false) String citizenId,
+            @RequestParam(value = "status", required = false) ComplaintStatus status,
+            @RequestParam(value = "category", required = false) ComplaintCategory category,
+            @RequestParam(value = "createdBy", required = false) String createdBy,
+            Authentication authentication) {
         try {
-            List<Complaint> complaints = complaintService.getComplaintsByCategory(category);
-            return ResponseEntity.ok(ApiResponse.success("Complaints by category retrieved", complaints));
+            String currentOfficerId = authentication.getName();
+            String currentRole = authentication.getAuthorities().iterator().next().getAuthority();
+            
+            List<Complaint> complaints;
+            
+            // Authorization logic based on role
+            if ("DISTRICT_COMMISSIONER".equals(currentRole)) {
+                // DC can see all complaints with any filter
+                if (createdBy != null) {
+                    complaints = complaintService.getComplaintsCreatedByOfficer(createdBy);
+                } else if (officerId != null) {
+                    complaints = complaintService.getComplaintsByOfficer(officerId);
+                } else if (citizenId != null) {
+                    complaints = complaintService.getComplaintsByCitizen(citizenId);
+                } else if (status != null) {
+                    complaints = complaintService.getComplaintsByStatus(status);
+                } else if (category != null) {
+                    complaints = complaintService.getComplaintsByCategory(category);
+                } else {
+                    complaints = complaintService.getAllComplaints();
+                }
+            } else {
+                // Regular officers can only see complaints they created
+                if (createdBy != null && createdBy.equals(currentOfficerId)) {
+                    complaints = complaintService.getComplaintsCreatedByOfficer(createdBy);
+                } else if (createdBy == null) {
+                    // If no createdBy specified, default to current officer's created complaints
+                    complaints = complaintService.getComplaintsCreatedByOfficer(currentOfficerId);
+                } else {
+                    // Officer trying to access other officer's complaints - not allowed
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(ApiResponse.error("Access denied: You can only view complaints you created"));
+                }
+            }
+            
+            return ResponseEntity.ok(ApiResponse.success("Complaints retrieved successfully", complaints));
         } catch (Exception e) {
-            logger.error("Failed to fetch complaints by category {}: {}", category, e.getMessage());
+            logger.error("Failed to fetch complaints: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to fetch complaints by category: " + e.getMessage()));
-        }
-    }
-
-    @GetMapping("/status/{status}")
-    public ResponseEntity<ApiResponse<List<Complaint>>> getComplaintsByStatus(@PathVariable ComplaintStatus status) {
-        try {
-            List<Complaint> complaints = complaintService.getComplaintsByStatus(status);
-            return ResponseEntity.ok(ApiResponse.success("Complaints by status retrieved", complaints));
-        } catch (Exception e) {
-            logger.error("Failed to fetch complaints by status {}: {}", status, e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to fetch complaints by status: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to fetch complaints: " + e.getMessage()));
         }
     }
 

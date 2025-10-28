@@ -16,9 +16,13 @@ public interface ComplaintRepository extends MongoRepository<Complaint, String> 
 
     Optional<Complaint> findByComplaintNumber(String complaintNumber);
 
+    Optional<Complaint> findByComplaintId(Long complaintId);
+
     List<Complaint> findByCitizenId(String citizenId);
 
     List<Complaint> findByAssignedToId(String officerId);
+
+    List<Complaint> findByCreatedById(String officerId);
 
     List<Complaint> findByStatus(ComplaintStatus status);
 

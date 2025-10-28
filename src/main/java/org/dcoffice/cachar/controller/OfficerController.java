@@ -72,7 +72,7 @@ public class OfficerController {
     }
 
     @GetMapping("/my-complaints/{officerId}")
-    public ResponseEntity<ApiResponse<List<Complaint>>> getMyComplaints(@PathVariable Long officerId) {
+    public ResponseEntity<ApiResponse<List<Complaint>>> getMyComplaints(@PathVariable String officerId) {
         try {
             List<Complaint> complaints = complaintService.getComplaintsByOfficer(officerId);
             return ResponseEntity.ok(ApiResponse.success("Officer complaints retrieved", complaints));
@@ -106,7 +106,7 @@ public class OfficerController {
     }
 
     @GetMapping("/dashboard-stats/{officerId}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats(@PathVariable Long officerId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats(@PathVariable String officerId) {
         try {
             List<Complaint> allComplaints = complaintService.getComplaintsByOfficer(officerId);
 

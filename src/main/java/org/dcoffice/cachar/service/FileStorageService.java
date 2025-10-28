@@ -85,7 +85,8 @@ public class FileStorageService {
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             ComplaintDocument document = new ComplaintDocument();
-            document.setId(complaint.getId());
+            document.setComplaintId(complaint.getId());
+            document.setComplaintNumber(complaint.getComplaintNumber());
             document.setFileName(fileName);
             document.setOriginalFileName(originalFileName);
             document.setFileType(file.getContentType());
@@ -131,11 +132,11 @@ public class FileStorageService {
         }
     }
 
-    public List<ComplaintDocument> getComplaintDocuments(Long complaintId) {
+    public List<ComplaintDocument> getComplaintDocuments(String complaintId) {
         return documentRepository.findByComplaintId(complaintId);
     }
-    public List<ComplaintDocument> getComplaintDocuments(String complaintId) {
-        return documentRepository.findByComplaintNumber(complaintId);
+    public List<ComplaintDocument> getComplaintDocumentsByNumber(String complaintNumber) {
+        return documentRepository.findByComplaintNumber(complaintNumber);
     }
 
     private void validateFile(MultipartFile file) {

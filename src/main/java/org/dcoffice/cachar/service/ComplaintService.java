@@ -117,8 +117,16 @@ public class ComplaintService {
         return complaintRepository.findByCitizenId(citizenMobile);
     }
 
-    public List<Complaint> getComplaintsByOfficer(Long officerId) {
-        return complaintRepository.findByAssignedToId(String.valueOf(officerId));
+    public List<Complaint> getComplaintsByOfficer(String officerId) {
+        return complaintRepository.findByAssignedToId(officerId);
+    }
+
+    public List<Complaint> getComplaintsCreatedByOfficer(String officerId) {
+        return complaintRepository.findByCreatedById(officerId);
+    }
+
+    public List<Complaint> getAllComplaints() {
+        return complaintRepository.findAll();
     }
 
     public List<Complaint> getUnassignedComplaints() {
@@ -136,6 +144,10 @@ public class ComplaintService {
     public List<Complaint> getRecentComplaints(int days) {
         LocalDateTime fromDate = LocalDateTime.now().minusDays(days);
         return complaintRepository.findRecentComplaints(fromDate);
+    }
+
+    public Optional<Complaint> findByComplaintId(Long complaintId) {
+        return complaintRepository.findByComplaintId(complaintId);
     }
 
     public Optional<Complaint> findByComplaintNumber(String complaintNumber) {
@@ -156,8 +168,8 @@ public class ComplaintService {
         return complaintRepository.count();
     }
 
-    public Long getActiveComplaintsByOfficer(Long officerId) {
-        return complaintRepository.countActiveComplaintsByOfficer(String.valueOf(officerId));
+    public Long getActiveComplaintsByOfficer(String officerId) {
+        return complaintRepository.countActiveComplaintsByOfficer(officerId);
     }
 
     public Long getComplaintsInDateRange(LocalDateTime startDate, LocalDateTime endDate) {

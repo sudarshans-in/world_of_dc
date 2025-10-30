@@ -39,9 +39,13 @@ public class Complaint {
     private Priority priority = Priority.MEDIUM;
 
     @Indexed
-    private ComplaintStatus status = ComplaintStatus.SUBMITTED;
+    private ComplaintStatus status = ComplaintStatus.CREATED;
 
     private String location;
+
+    // Department assignment
+    private Department assignedDepartment = Department.UNASSIGNED;
+    private String departmentRemarks;
 
     // Store officer IDs instead of references
     @Indexed
@@ -51,6 +55,11 @@ public class Complaint {
 
     private String assignmentRemarks;
     private LocalDateTime assignedAt;
+
+    // Progress tracking
+    private String progressNotes;
+    private Integer progressPercentage = 0; // 0-100
+    private LocalDateTime lastProgressUpdate;
 
     @Indexed
     private LocalDateTime createdAt;
@@ -137,4 +146,35 @@ public class Complaint {
 
     public List<ComplaintHistory> getHistory() { return history; }
     public void setHistory(List<ComplaintHistory> history) { this.history = history; }
+
+    // Department getters and setters
+    public Department getAssignedDepartment() { return assignedDepartment; }
+    public void setAssignedDepartment(Department assignedDepartment) { 
+        this.assignedDepartment = assignedDepartment; 
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public String getDepartmentRemarks() { return departmentRemarks; }
+    public void setDepartmentRemarks(String departmentRemarks) { 
+        this.departmentRemarks = departmentRemarks; 
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // Progress getters and setters
+    public String getProgressNotes() { return progressNotes; }
+    public void setProgressNotes(String progressNotes) { 
+        this.progressNotes = progressNotes; 
+        this.lastProgressUpdate = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public Integer getProgressPercentage() { return progressPercentage; }
+    public void setProgressPercentage(Integer progressPercentage) { 
+        this.progressPercentage = Math.max(0, Math.min(100, progressPercentage)); // Ensure 0-100 range
+        this.lastProgressUpdate = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public LocalDateTime getLastProgressUpdate() { return lastProgressUpdate; }
+    public void setLastProgressUpdate(LocalDateTime lastProgressUpdate) { this.lastProgressUpdate = lastProgressUpdate; }
 }

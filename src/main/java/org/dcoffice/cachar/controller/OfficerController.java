@@ -127,9 +127,8 @@ public class OfficerController {
             stats.put("active", active);
             stats.put("resolved", resolved);
             stats.put("closed", closed);
-            stats.put("pendingInformation", allComplaints.stream()
-                    .mapToLong(c -> c.getStatus() == ComplaintStatus.PENDING_INFORMATION ? 1 : 0)
-                    .sum());
+            // Pending information state removed; keep key for API stability with 0 value
+            stats.put("pendingInformation", 0L);
 
             return ResponseEntity.ok(ApiResponse.success("Dashboard stats retrieved", stats));
         } catch (Exception e) {

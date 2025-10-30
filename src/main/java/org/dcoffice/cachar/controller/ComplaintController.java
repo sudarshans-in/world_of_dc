@@ -1,6 +1,9 @@
 package org.dcoffice.cachar.controller;
 
 import org.dcoffice.cachar.dto.ApiResponse;
+import org.dcoffice.cachar.dto.ComplaintUpdateRequest;
+import org.dcoffice.cachar.dto.ComplaintDepartmentAssignmentRequest;
+import org.dcoffice.cachar.dto.ComplaintProgressUpdateRequest;
 import org.dcoffice.cachar.entity.*;
 import org.dcoffice.cachar.service.CitizenService;
 import org.dcoffice.cachar.service.ComplaintHistoryService;
@@ -14,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.Authentication;
+
+import javax.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -182,7 +187,7 @@ public class ComplaintController {
             List<Complaint> complaints;
             
             // Authorization logic based on role
-            if ("DISTRICT_COMMISSIONER".equals(currentRole)) {
+            if ("ROLE_DISTRICT_COMMISSIONER".equals(currentRole)) {
                 // DC can see all complaints with any filter
                 if (createdBy != null) {
                     complaints = complaintService.getComplaintsCreatedByOfficer(createdBy);
@@ -216,6 +221,81 @@ public class ComplaintController {
             logger.error("Failed to fetch complaints: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to fetch complaints: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update complaint details - only DC or complaint creator can update
+     */
+    @PutMapping("/update")
+    public ResponseEntity<ApiResponse<Complaint>> updateComplaint(
+            @Valid @RequestBody ComplaintUpdateRequest request,
+            Authentication authentication) {
+        try {
+            String currentOfficerId = authentication.getName();
+            String currentRole = authentication.getAuthorities().iterator().next().getAuthority();
+            
+            Complaint updatedComplaint = complaintService.updateComplaint(request, currentOfficerId, currentRole);
+            
+            return ResponseEntity.ok(ApiResponse.success("Complaint updated successfully", updatedComplaint));
+        } catch (SecurityException e) {
+            logger.warn("Unauthorized complaint update attempt: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Failed to update complaint: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update complaint: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Assign complaint to department - only DC can assign
+     */
+    @PutMapping("/assign-department")
+    public ResponseEntity<ApiResponse<Complaint>> assignComplaintToDepartment(
+            @Valid @RequestBody ComplaintDepartmentAssignmentRequest request,
+            Authentication authentication) {
+        try {
+            String currentOfficerId = authentication.getName();
+            String currentRole = authentication.getAuthorities().iterator().next().getAuthority();
+            
+            Complaint updatedComplaint = complaintService.assignComplaintToDepartment(request, currentOfficerId, currentRole);
+            
+            return ResponseEntity.ok(ApiResponse.success("Complaint assigned to department successfully", updatedComplaint));
+        } catch (SecurityException e) {
+            logger.warn("Unauthorized department assignment attempt: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Failed to assign complaint to department: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to assign department: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Update complaint progress - only DC or complaint creator can update
+     */
+    @PutMapping("/update-progress")
+    public ResponseEntity<ApiResponse<Complaint>> updateComplaintProgress(
+            @Valid @RequestBody ComplaintProgressUpdateRequest request,
+            Authentication authentication) {
+        try {
+            String currentOfficerId = authentication.getName();
+            String currentRole = authentication.getAuthorities().iterator().next().getAuthority();
+            
+            Complaint updatedComplaint = complaintService.updateComplaintProgress(request, currentOfficerId, currentRole);
+            
+            return ResponseEntity.ok(ApiResponse.success("Complaint progress updated successfully", updatedComplaint));
+        } catch (SecurityException e) {
+            logger.warn("Unauthorized progress update attempt: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Failed to update complaint progress: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update progress: " + e.getMessage()));
         }
     }
 

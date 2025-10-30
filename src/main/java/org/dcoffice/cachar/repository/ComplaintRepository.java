@@ -28,7 +28,7 @@ public interface ComplaintRepository extends MongoRepository<Complaint, String> 
 
     List<Complaint> findByCategory(ComplaintCategory category);
 
-    @Query("{ 'assignedToId': null, 'status': 'SUBMITTED' }")
+    @Query("{ 'assignedToId': null, 'status': 'CREATED' }")
     List<Complaint> findUnassignedComplaints();
 
     @Query(value = "{ 'assignedToId': ?0, 'status': { $in: ['ASSIGNED', 'IN_PROGRESS'] } }", count = true)

@@ -2,6 +2,9 @@
 // ComplaintService.java
 package org.dcoffice.cachar.service;
 
+import org.dcoffice.cachar.dto.ComplaintUpdateRequest;
+import org.dcoffice.cachar.dto.ComplaintDepartmentAssignmentRequest;
+import org.dcoffice.cachar.dto.ComplaintProgressUpdateRequest;
 import org.dcoffice.cachar.entity.*;
 import org.dcoffice.cachar.exception.ComplaintNotFoundException;
 import org.dcoffice.cachar.repository.ComplaintRepository;
@@ -63,7 +66,7 @@ public class ComplaintService {
                 savedComplaint,
                 null, // actor is null because it's submitted by citizen
                 null, // no previous status
-                ComplaintStatus.SUBMITTED,
+                ComplaintStatus.CREATED,
                 "Complaint submitted by citizen"
         );
 
@@ -174,6 +177,126 @@ public class ComplaintService {
 
     public Long getComplaintsInDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         return complaintRepository.countComplaintsByDateRange(startDate, endDate);
+    }
+
+    /**
+     * Update complaint details - only DC or complaint creator can update
+     */
+    public Complaint updateComplaint(ComplaintUpdateRequest request, String currentOfficerId, String currentRole) {
+        Complaint complaint = getComplaintById(request.getComplaintId());
+        
+        // Check authorization - only DC or complaint creator can update
+        if (!"ROLE_DISTRICT_COMMISSIONER".equals(currentRole) && 
+            !complaint.getCreatedById().equals(currentOfficerId)) {
+            throw new SecurityException("Access denied: Only District Commissioner or complaint creator can update complaints");
+        }
+        
+        // Update fields if provided
+        if (request.getSubject() != null && !request.getSubject().trim().isEmpty()) {
+            complaint.setSubject(request.getSubject().trim());
+        }
+        if (request.getDescription() != null && !request.getDescription().trim().isEmpty()) {
+            complaint.setDescription(request.getDescription().trim());
+        }
+        if (request.getLocation() != null) {
+            complaint.setLocation(request.getLocation());
+        }
+        if (request.getPriority() != null) {
+            complaint.setPriority(request.getPriority());
+        }
+        if (request.getStatus() != null) {
+            ComplaintStatus previous = complaint.getStatus();
+            ComplaintStatus next = request.getStatus();
+            if (!ComplaintStatus.isValidTransition(previous, next)) {
+                throw new IllegalArgumentException("Invalid status transition: " + previous + " -> " + next);
+            }
+            complaint.setStatus(next);
+        }
+        if (request.getAssignedDepartment() != null) {
+            complaint.setAssignedDepartment(request.getAssignedDepartment());
+        }
+        if (request.getDepartmentRemarks() != null) {
+            complaint.setDepartmentRemarks(request.getDepartmentRemarks());
+        }
+        if (request.getProgressNotes() != null) {
+            complaint.setProgressNotes(request.getProgressNotes());
+        }
+        if (request.getProgressPercentage() != null) {
+            complaint.setProgressPercentage(request.getProgressPercentage());
+        }
+        
+        // Add to history
+        addToHistory(complaint, "Complaint updated", request.getUpdateRemarks(), currentOfficerId);
+        
+        return complaintRepository.save(complaint);
+    }
+    
+    /**
+     * Assign complaint to department - only DC can assign
+     */
+    public Complaint assignComplaintToDepartment(ComplaintDepartmentAssignmentRequest request, String currentOfficerId, String currentRole) {
+        if (!"ROLE_DISTRICT_COMMISSIONER".equals(currentRole)) {
+            throw new SecurityException("Access denied: Only District Commissioner can assign departments");
+        }
+        
+        Complaint complaint = getComplaintById(request.getComplaintId());
+        complaint.setAssignedDepartment(request.getDepartment());
+        complaint.setDepartmentRemarks(request.getAssignmentRemarks());
+        
+        // Add to history
+        addToHistory(complaint, "Department assigned to " + request.getDepartment().getDisplayName(), 
+                    request.getAssignmentRemarks(), currentOfficerId);
+        
+        return complaintRepository.save(complaint);
+    }
+    
+    /**
+     * Update complaint progress - only DC or complaint creator can update
+     */
+    public Complaint updateComplaintProgress(ComplaintProgressUpdateRequest request, String currentOfficerId, String currentRole) {
+        Complaint complaint = getComplaintById(request.getComplaintId());
+        
+        // Check authorization - only DC or complaint creator can update
+        if (!"ROLE_DISTRICT_COMMISSIONER".equals(currentRole) && 
+            !complaint.getCreatedById().equals(currentOfficerId)) {
+            throw new SecurityException("Access denied: Only District Commissioner or complaint creator can update progress");
+        }
+        
+        complaint.setProgressPercentage(request.getProgressPercentage());
+        complaint.setProgressNotes(request.getProgressNotes());
+        
+        // Add to history
+        addToHistory(complaint, "Progress updated to " + request.getProgressPercentage() + "%", 
+                    request.getUpdateRemarks(), currentOfficerId);
+        
+        return complaintRepository.save(complaint);
+    }
+    
+    /**
+     * Add entry to complaint history
+     */
+    private void addToHistory(Complaint complaint, String action, String remarks, String updatedBy) {
+        if (complaint.getHistory() == null) {
+            complaint.setHistory(new java.util.ArrayList<>());
+        }
+        
+        ComplaintHistory historyEntry = new ComplaintHistory();
+        historyEntry.setComplaintNumber(complaint.getComplaintNumber());
+        // Capture previous status if possible (last history entry), else null
+        ComplaintStatus previous = null;
+        java.util.List<ComplaintHistory> h = complaint.getHistory();
+        if (!h.isEmpty()) {
+            previous = h.get(h.size() - 1).getNewStatus();
+        } else {
+            previous = null;
+        }
+        historyEntry.setPreviousStatus(previous);
+        historyEntry.setNewStatus(complaint.getStatus());
+        historyEntry.setRemarks(action + ": " + remarks);
+        historyEntry.setOfficerId(updatedBy);
+        historyEntry.setTimestamp(LocalDateTime.now());
+        
+        complaint.getHistory().add(historyEntry);
     }
 
     private String generateComplaintNumber() {

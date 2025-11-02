@@ -3,27 +3,33 @@ package org.dcoffice.cachar.controller;
 import org.dcoffice.cachar.dto.ApiResponse;
 import org.dcoffice.cachar.dto.ComplaintUpdateRequest;
 import org.dcoffice.cachar.dto.ComplaintDepartmentAssignmentRequest;
-import org.dcoffice.cachar.dto.ComplaintProgressUpdateRequest;
+import org.dcoffice.cachar.dto.CommentCreateRequest;
+import org.dcoffice.cachar.dto.CommentUpdateRequest;
 import org.dcoffice.cachar.entity.*;
 import org.dcoffice.cachar.service.CitizenService;
 import org.dcoffice.cachar.service.ComplaintHistoryService;
 import org.dcoffice.cachar.service.ComplaintService;
 import org.dcoffice.cachar.service.FileStorageService;
+import org.dcoffice.cachar.repository.CommentRepository;
+import org.dcoffice.cachar.repository.CommentAttachmentRepository;
+import org.dcoffice.cachar.repository.ComplaintDocumentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.Authentication;
 
 import javax.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,6 +51,15 @@ public class ComplaintController {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Autowired
+    private CommentAttachmentRepository commentAttachmentRepository;
+
+    @Autowired
+    private ComplaintDocumentRepository complaintDocumentRepository;
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createComplaint(
@@ -165,6 +180,44 @@ public class ComplaintController {
             logger.error("Failed to track complaint {}: {}", complaintNumber, e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to track complaint: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<Complaint>> getComplaintById(@PathVariable String id) {
+        try {
+            // Try to parse as numeric ID first, then fall back to MongoDB ObjectId
+            Complaint complaint;
+            try {
+                Long complaintId = Long.parseLong(id);
+                complaint = complaintService.getComplaintWithComments(complaintId);
+            } catch (NumberFormatException e) {
+                // If it's not a number, treat it as MongoDB ObjectId
+                complaint = complaintService.getComplaintByIdString(id);
+                if (complaint != null) {
+                    // Load comments for this complaint and populate attachments
+                    List<Comment> comments = commentRepository.findByComplaintIdOrderByCreatedAtAsc(complaint.getId());
+                    for (Comment comment : comments) {
+                        List<CommentAttachment> attachments = commentAttachmentRepository.findByCommentId(comment.getId());
+                        comment.setAttachments(attachments);
+                    }
+                    complaint.setComments(comments);
+
+                    // Load documents for this complaint
+                    List<ComplaintDocument> documents = complaintDocumentRepository.findByComplaintId(complaint.getId());
+                    complaint.setDocuments(documents);
+                }
+            }
+
+            if (complaint == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("Complaint retrieved successfully", complaint));
+        } catch (Exception e) {
+            logger.error("Failed to get complaint {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get complaint: " + e.getMessage()));
         }
     }
 
@@ -290,29 +343,179 @@ public class ComplaintController {
                     .body(ApiResponse.error("Failed to assign department: " + e.getMessage()));
         }
     }
-    
-    /**
-     * Update complaint progress - only DC or complaint creator can update
-     */
-    @PutMapping("/update-progress")
-    public ResponseEntity<ApiResponse<Complaint>> updateComplaintProgress(
-            @Valid @RequestBody ComplaintProgressUpdateRequest request,
+
+    // Comment endpoints
+    @PostMapping(value = "/{complaintId}/comments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Comment>> addComment(
+            @PathVariable String complaintId,
+            @RequestParam("text") String text,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
             Authentication authentication) {
         try {
-            String currentOfficerId = authentication.getName();
-            String currentRole = authentication.getAuthorities().iterator().next().getAuthority();
-            
-            Complaint updatedComplaint = complaintService.updateComplaintProgress(request, currentOfficerId, currentRole);
-            
-            return ResponseEntity.ok(ApiResponse.success("Complaint progress updated successfully", updatedComplaint));
-        } catch (SecurityException e) {
-            logger.warn("Unauthorized progress update attempt: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.error(e.getMessage()));
+            String currentUserId = authentication.getName();
+            String currentUserRole = authentication.getAuthorities().iterator().next().getAuthority();
+
+            // Validate text is not empty
+            if (text == null || text.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Comment text is required"));
+            }
+
+            Comment comment = new Comment();
+            comment.setComplaintId(complaintId);
+            comment.setCommenterId(currentUserId);
+            comment.setText(text.trim());
+
+            // Set commenter name and role based on user type
+            if ("ROLE_OFFICER".equals(currentUserRole) || "ROLE_DISTRICT_COMMISSIONER".equals(currentUserRole)) {
+                // For officers, we need to get their name from officer service
+                comment.setCommenterRole(currentUserRole.replace("ROLE_", ""));
+            } else {
+                // For citizens
+                comment.setCommenterRole("CITIZEN");
+            }
+
+            // Handle file attachments if provided
+            List<CommentAttachment> attachments = new ArrayList<>();
+            if (files != null && !files.isEmpty()) {
+                for (MultipartFile file : files) {
+                    if (!file.isEmpty()) {
+                        try {
+                            String filePath = fileStorageService.storeFile(file, "comment-attachments");
+
+                            CommentAttachment attachment = new CommentAttachment();
+                            attachment.setCommentId(comment.getId()); // Will be set after comment is saved
+                            attachment.setFileName(file.getOriginalFilename());
+                            attachment.setFilePath(filePath);
+                            attachment.setFileSize(file.getSize());
+                            attachment.setMimeType(file.getContentType());
+
+                            // Determine attachment type
+                            String mimeType = file.getContentType();
+                            if (mimeType != null) {
+                                if (mimeType.startsWith("image/")) {
+                                    attachment.setAttachmentType("image");
+                                } else if (mimeType.startsWith("video/")) {
+                                    attachment.setAttachmentType("video");
+                                } else {
+                                    attachment.setAttachmentType("document");
+                                }
+                            }
+
+                            attachments.add(attachment);
+                        } catch (Exception e) {
+                            logger.error("Failed to upload file {}: {}", file.getOriginalFilename(), e.getMessage());
+                            // Continue with other files, don't fail the whole comment
+                        }
+                    }
+                }
+            }
+
+            Comment savedComment = commentRepository.save(comment);
+
+            // Save attachments with the comment ID
+            if (!attachments.isEmpty()) {
+                for (CommentAttachment attachment : attachments) {
+                    attachment.setCommentId(savedComment.getId());
+                    commentAttachmentRepository.save(attachment);
+                }
+
+                // Update comment with attachments
+                savedComment.setAttachments(attachments);
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("Comment added successfully", savedComment));
         } catch (Exception e) {
-            logger.error("Failed to update complaint progress: {}", e.getMessage());
+            logger.error("Failed to add comment to complaint {}: {}", complaintId, e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to update progress: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to add comment: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{complaintId}/comments")
+    public ResponseEntity<ApiResponse<List<Comment>>> getComments(@PathVariable String complaintId) {
+        try {
+            List<Comment> comments = commentRepository.findByComplaintIdOrderByCreatedAtAsc(complaintId);
+
+            // Populate attachments for each comment
+            for (Comment comment : comments) {
+                List<CommentAttachment> attachments = commentAttachmentRepository.findByCommentId(comment.getId());
+                comment.setAttachments(attachments);
+            }
+
+            return ResponseEntity.ok(ApiResponse.success("Comments retrieved successfully", comments));
+        } catch (Exception e) {
+            logger.error("Failed to get comments for complaint {}: {}", complaintId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to get comments: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/comments/{commentId}")
+    public ResponseEntity<ApiResponse<Comment>> updateComment(
+            @PathVariable String commentId,
+            @Valid @RequestBody CommentUpdateRequest request,
+            Authentication authentication) {
+        try {
+            String currentUserId = authentication.getName();
+
+            Optional<Comment> commentOpt = commentRepository.findById(commentId);
+            if (!commentOpt.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Comment comment = commentOpt.get();
+
+            // Only comment author can update
+            if (!comment.getCommenterId().equals(currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("You can only update your own comments"));
+            }
+
+            comment.setText(request.getText());
+            comment.setUpdatedAt(LocalDateTime.now());
+
+            Comment updatedComment = commentRepository.save(comment);
+
+            return ResponseEntity.ok(ApiResponse.success("Comment updated successfully", updatedComment));
+        } catch (Exception e) {
+            logger.error("Failed to update comment {}: {}", commentId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update comment: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteComment(
+            @PathVariable String commentId,
+            Authentication authentication) {
+        try {
+            String currentUserId = authentication.getName();
+
+            Optional<Comment> commentOpt = commentRepository.findById(commentId);
+            if (!commentOpt.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Comment comment = commentOpt.get();
+
+            // Only comment author can delete
+            if (!comment.getCommenterId().equals(currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("You can only delete your own comments"));
+            }
+
+            // Delete comment attachments first
+            commentAttachmentRepository.deleteByCommentId(commentId);
+
+            // Delete comment
+            commentRepository.deleteById(commentId);
+
+            return ResponseEntity.ok(ApiResponse.success("Comment deleted successfully", null));
+        } catch (Exception e) {
+            logger.error("Failed to delete comment {}: {}", commentId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to delete comment: " + e.getMessage()));
         }
     }
 

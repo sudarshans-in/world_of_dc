@@ -45,8 +45,10 @@ public class Complaint {
 
     // Store officer IDs instead of references
     @Indexed
+    @NotBlank(message = "Assigned officer is required")
     private String assignedToId;
     private String assignedById;
+    @NotBlank(message = "Created by officer is required")
     private String createdById; // Track who created the complaint
 
     private String assignmentRemarks;

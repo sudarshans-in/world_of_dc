@@ -156,6 +156,10 @@ public class CitizenService {
                 .orElseThrow(() -> new CitizenNotFoundException("Citizen not found with mobile number: " + mobileNumber));
     }
 
+    public Optional<Citizen> findById(String id) {
+        return citizenRepository.findById(id);
+    }
+
     public boolean isCitizenVerified(String mobileNumber) {
         return citizenRepository.findByMobileNumber(mobileNumber)
                 .map(Citizen::isVerified)

@@ -1,9 +1,12 @@
 package org.dcoffice.cachar.config;
 
+import org.dcoffice.cachar.service.CitizenService;
 import org.dcoffice.cachar.service.JwtService;
+import org.dcoffice.cachar.service.OfficerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,6 +37,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    @Lazy
+    private CitizenService citizenService;
+
+    @Autowired
+    @Lazy
+    private OfficerService officerService;
 
     /**
      * Configure HTTP Security
@@ -66,9 +77,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/api/citizen/register").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/citizen/profile/**").permitAll()
 
-                // Public complaint endpoints (citizens can track their complaints)
+                // Public complaint tracking (anyone can track complaints)
                 .antMatchers(HttpMethod.GET, "/api/complaints/track/**").permitAll()
-                .antMatchers(HttpMethod.GET, "/api/complaints/citizen/**").permitAll()
 
                 // Public file download (for citizens to view their attachments)
                 .antMatchers(HttpMethod.GET, "/api/files/download/**").permitAll()
@@ -95,7 +105,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/api/officer/**").authenticated()
 
                 // Administrative complaint endpoints (require officer authentication)
-                .antMatchers(HttpMethod.POST, "/api/complaints/create").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/unassigned").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/recent/**").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/category/**").authenticated()
@@ -188,7 +197,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
      */
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService);
+        return new JwtAuthenticationFilter(jwtService, citizenService, officerService);
     }
 }
 

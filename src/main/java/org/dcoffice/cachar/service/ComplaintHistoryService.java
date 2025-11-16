@@ -47,7 +47,7 @@ public class ComplaintHistoryService {
 
 
     public List<ComplaintHistory> getComplaintHistory(String complaintNumber) {
-        return complaintHistoryRepository.findByComplaintIdOrderByTimestampDesc(complaintNumber);
+        return complaintHistoryRepository.findByComplaintNumberOrderByTimestampDesc(complaintNumber);
     }
 
     public List<ComplaintHistory> getOfficerHistory(String officerId) {

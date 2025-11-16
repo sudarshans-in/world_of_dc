@@ -8,6 +8,7 @@ import java.util.List;
 
 @Repository
 public interface ComplaintHistoryRepository extends MongoRepository<ComplaintHistory, String> {
-    List<ComplaintHistory> findByComplaintIdOrderByTimestampDesc(String complaintId); // ✅
+    List<ComplaintHistory> findByComplaintNumberOrderByTimestampDesc(String complaintNumber);
+    List<ComplaintHistory> findByComplaintIdOrderByTimestampDesc(Long complaintId);
     List<ComplaintHistory> findByOfficerIdOrderByTimestampDesc(String officerId);
 }

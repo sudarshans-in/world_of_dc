@@ -161,4 +161,17 @@ public class OfficerService {
         }
         return false;
     }
+
+    /**
+     * Get the default officer for citizen complaints
+     */
+    public Officer getDefaultOfficerOrNull() throws OfficerNotFoundException {
+        Optional<Officer> defaultOfficer = officerRepository.findDefaultOfficer();
+        if (defaultOfficer.isPresent()) {
+            return defaultOfficer.get();
+        }
+      
+        throw new OfficerNotFoundException("No default officer found. Please set a default officer.");
+    }
+
 }

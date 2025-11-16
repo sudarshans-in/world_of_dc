@@ -69,37 +69,85 @@ public class ComplaintController {
 
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<Map<String, Object>>> createComplaint(
-            @RequestParam("mobileNumber") String mobileNumber,
+            @RequestParam(value = "mobileNumber", required = false) String mobileNumber,
             @RequestParam("subject") String subject,
             @RequestParam("description") String description,
-            @RequestParam(value = "priority", defaultValue = "MEDIUM") String priorityStr,
+            @RequestParam(value = "priority", required = false) String priorityStr,
             @RequestParam(value = "location", required = false) String location,
             @RequestParam(value = "department", required = false) String departmentStr,
             @RequestParam(value = "files", required = false) List<MultipartFile> files,
             Authentication authentication) {
 
         try {
-            // Check if citizen exists, if not create one for testing
-            Citizen citizen;
-            if (!citizenService.isCitizenVerified(mobileNumber)) {
-                // Create a citizen for testing purposes
-                Citizen newCitizen = new Citizen();
-                newCitizen.setMobileNumber(mobileNumber);
-                newCitizen.setName("Test Citizen");
-                newCitizen.setEmail("test@example.com");
-                newCitizen.setVerified(true); // Mark as verified for testing
-                citizen = citizenService.registerOrUpdateCitizen(newCitizen);
+            // Authentication is required for all complaint creation
+            if (authentication == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Authentication required to create complaint"));
+            }
+
+            Citizen citizen = null;
+            boolean isCitizenComplaint = false;
+
+            String role = authentication.getAuthorities().iterator().next().getAuthority();
+
+            // Validate file attachments before processing
+            if (files != null && !files.isEmpty()) {
+                for (MultipartFile file : files) {
+                    if (!isValidFile(file)) {
+                        return ResponseEntity.badRequest()
+                                .body(ApiResponse.error("Invalid file type. Only images, videos, PDFs, and documents are allowed."));
+                    }
+                    // Check file size (max 10MB per file)
+                    if (file.getSize() > 10 * 1024 * 1024) {
+                        return ResponseEntity.badRequest()
+                                .body(ApiResponse.error("File size too large. Maximum allowed size is 10MB per file."));
+                    }
+                }
+            }
+
+            if ("ROLE_CITIZEN".equals(role)) {
+                // Citizen complaint - citizen must be authenticated and verified
+                citizen = (Citizen) authentication.getDetails();
+                if (citizen == null) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Citizen authentication failed"));
+                }
+                isCitizenComplaint = true;
+
+            } else if (role.startsWith("ROLE_") && !role.equals("ROLE_CITIZEN")) {
+                // Officer complaint - can be for officer themselves or on behalf of citizen
+                if (mobileNumber != null && !mobileNumber.trim().isEmpty()) {
+                    // Officer creating complaint on behalf of citizen
+                    if (!citizenService.isCitizenVerified(mobileNumber)) {
+                        // Create a citizen for testing purposes
+                        Citizen newCitizen = new Citizen();
+                        newCitizen.setMobileNumber(mobileNumber);
+                        newCitizen.setName("Test Citizen");
+                        newCitizen.setEmail("test@example.com");
+                        newCitizen.setVerified(true); // Mark as verified for testing
+                        citizen = citizenService.registerOrUpdateCitizen(newCitizen);
+                    } else {
+                        citizen = citizenService.getCitizenByMobileNumber(mobileNumber);
+                    }
+                } else {
+                    // Officer creating complaint for themselves - not allowed
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Officers cannot create complaints for themselves. Please specify a citizen mobile number."));
+                }
             } else {
-                citizen = citizenService.getCitizenByMobileNumber(mobileNumber);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Invalid user role"));
             }
 
             // Create complaint object
             Complaint complaint = new Complaint();
-            complaint.setCitizenId(citizen.getMobileNumber());
+            // Store citizen's MongoDB ID (not mobile number) to properly tag complaint to citizen
+            complaint.setCitizenId(citizen.getId());
             complaint.setSubject(subject);
             complaint.setDescription(description);
             
-            // Convert priority string to enum
+            // Convert priority string to enum - only if provided (for officer complaints)
+            // Citizen complaints don't have priority, default to MEDIUM
             Priority priority = Priority.MEDIUM; // Default
             if (priorityStr != null && !priorityStr.trim().isEmpty()) {
                 try {
@@ -111,7 +159,8 @@ public class ComplaintController {
             complaint.setPriority(priority);
             complaint.setLocation(location);
             
-            // Convert department string to enum
+            // Convert department string to enum - only for officer complaints
+            // Citizen complaints don't have department assignment
             if (departmentStr != null && !departmentStr.trim().isEmpty()) {
                 try {
                     Department department = Department.valueOf(departmentStr);
@@ -122,10 +171,12 @@ public class ComplaintController {
                 }
             }
             
-            // Set the officer who created the complaint
-            if (authentication != null) {
+            // Set the officer who created the complaint (only if authenticated as officer)
+            // For citizen complaints, createdById remains null
+            if (authentication != null && !isCitizenComplaint) {
                 complaint.setCreatedById(authentication.getName());
             }
+            // If it's a citizen complaint, createdById remains null, and ComplaintService will assign to default officer
 
             Complaint savedComplaint = complaintService.createComplaint(complaint, files);
 
@@ -151,7 +202,8 @@ public class ComplaintController {
                 return ResponseEntity.notFound().build();
             }
 
-            List<Complaint> complaints = complaintService.getComplaintsByCitizen(citizenOpt.get().getMobileNumber());
+            // Use citizen's MongoDB ID (not mobile number) to find complaints
+            List<Complaint> complaints = complaintService.getComplaintsByCitizen(citizenOpt.get().getId());
             return ResponseEntity.ok(ApiResponse.success("Complaints retrieved successfully", complaints));
 
         } catch (Exception e) {
@@ -294,7 +346,15 @@ public class ComplaintController {
                 } else if (officerId != null) {
                     complaints = complaintService.getComplaintsByOfficer(officerId);
                 } else if (citizenId != null) {
-                    complaints = complaintService.getComplaintsByCitizen(citizenId);
+                    // citizenId parameter can be either MongoDB ID or mobile number
+                    // Try to find citizen by mobile number first, then use their ID
+                    Optional<Citizen> citizenOpt = citizenService.findByMobileNumber(citizenId);
+                    if (citizenOpt.isPresent()) {
+                        complaints = complaintService.getComplaintsByCitizen(citizenOpt.get().getId());
+                    } else {
+                        // If not found by mobile, assume it's already a MongoDB ID
+                        complaints = complaintService.getComplaintsByCitizen(citizenId);
+                    }
                 } else if (status != null) {
                     complaints = complaintService.getComplaintsByStatus(status);
                 } else {
@@ -425,17 +485,21 @@ public class ComplaintController {
                 } catch (Exception e) {
                     logger.warn("Failed to get officer name for commenter {}: {}", currentUserId, e.getMessage());
                 }
-            } else {
-                // For citizens, get their name from citizen service
+            } else if ("ROLE_CITIZEN".equals(currentUserRole)) {
+                // For citizens, get name from authentication details
                 comment.setCommenterRole("CITIZEN");
                 try {
-                    Citizen citizen = citizenService.getCitizenByMobileNumber(currentUserId);
-                    if (citizen != null) {
+                    Object userDetails = authentication.getDetails();
+                    if (userDetails instanceof Citizen) {
+                        Citizen citizen = (Citizen) userDetails;
                         comment.setCommenterName(citizen.getName());
                     }
                 } catch (Exception e) {
-                    logger.warn("Failed to get citizen name for commenter {}: {}", currentUserId, e.getMessage());
+                    logger.warn("Failed to get citizen name from authentication details: {}", e.getMessage());
                 }
+            } else {
+                comment.setCommenterRole("UNKNOWN");
+                comment.setCommenterName("Unknown User");
             }
 
             // Handle file attachments if provided
@@ -517,7 +581,20 @@ public class ComplaintController {
                                 commentRepository.save(comment);
                             }
                         } else if ("CITIZEN".equals(comment.getCommenterRole())) {
-                            Citizen citizen = citizenService.getCitizenByMobileNumber(comment.getCommenterId());
+                            // For citizens, try to find by ID first (new format), then by mobile number (old format)
+                            Citizen citizen = null;
+                            try {
+                                citizen = citizenService.findById(comment.getCommenterId()).orElse(null);
+                            } catch (Exception e) {
+                                // Not a valid ObjectId, try as mobile number
+                            }
+                            if (citizen == null) {
+                                try {
+                                    citizen = citizenService.getCitizenByMobileNumber(comment.getCommenterId());
+                                } catch (Exception e) {
+                                    // Citizen not found
+                                }
+                            }
                             if (citizen != null) {
                                 comment.setCommenterName(citizen.getName());
                                 // Optionally save the updated comment
@@ -611,5 +688,63 @@ public class ComplaintController {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String randomSuffix = String.format("%04d", (int)(Math.random() * 10000));
         return prefix + timestamp + randomSuffix;
+    }
+
+    /**
+     * Validate file type and extension
+     */
+    private boolean isValidFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return true; // Allow empty files
+        }
+
+        String filename = file.getOriginalFilename();
+        if (filename == null) {
+            return false;
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null) {
+            return false;
+        }
+
+        // Convert to lowercase for case-insensitive comparison
+        filename = filename.toLowerCase();
+        contentType = contentType.toLowerCase();
+
+        // Check file extensions and MIME types
+        // Images
+        if (filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".png") ||
+            filename.endsWith(".gif") || filename.endsWith(".bmp") || filename.endsWith(".webp")) {
+            return contentType.startsWith("image/");
+        }
+
+        // Videos
+        if (filename.endsWith(".mp4") || filename.endsWith(".avi") || filename.endsWith(".mov") ||
+            filename.endsWith(".wmv") || filename.endsWith(".flv") || filename.endsWith(".webm") ||
+            filename.endsWith(".mkv")) {
+            return contentType.startsWith("video/");
+        }
+
+        // PDFs
+        if (filename.endsWith(".pdf")) {
+            return contentType.equals("application/pdf");
+        }
+
+        // Documents
+        if (filename.endsWith(".doc") || filename.endsWith(".docx") || filename.endsWith(".xls") ||
+            filename.endsWith(".xlsx") || filename.endsWith(".ppt") || filename.endsWith(".pptx") ||
+            filename.endsWith(".txt") || filename.endsWith(".rtf")) {
+            return contentType.startsWith("application/") ||
+                   contentType.startsWith("text/") ||
+                   contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document") ||
+                   contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") ||
+                   contentType.equals("application/vnd.openxmlformats-officedocument.presentationml.presentation") ||
+                   contentType.equals("application/msword") ||
+                   contentType.equals("application/vnd.ms-excel") ||
+                   contentType.equals("application/vnd.ms-powerpoint");
+        }
+
+        return false;
     }
 }

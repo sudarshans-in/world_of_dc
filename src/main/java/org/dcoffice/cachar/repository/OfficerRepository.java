@@ -31,4 +31,7 @@ public interface OfficerRepository extends MongoRepository<Officer, String> {
 
     @Query("{ 'name': { $regex: ?0, $options: 'i' }, 'isActive': true }")
     List<Officer> findActiveOfficersByNameContaining(String name);
+
+    @Query("{ 'isDefault': true, 'isActive': true, 'isApproved': true }")
+    Optional<Officer> findDefaultOfficer();
 }

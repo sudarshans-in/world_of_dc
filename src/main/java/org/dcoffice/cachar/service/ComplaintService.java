@@ -53,10 +53,22 @@ public class ComplaintService {
         complaint.setComplaintNumber(generateComplaintNumber());
         complaint.setComplaintId(counterService.getNextSequence("complaintId"));
         
-        // Assign the creator as the assigned officer if createdById is set
+        // Assign the creator as the assigned officer if createdById is set (officer creating complaint)
         if (complaint.getCreatedById() != null && !complaint.getCreatedById().isEmpty()) {
             complaint.setAssignedToId(complaint.getCreatedById());
             complaint.setAssignedAt(LocalDateTime.now());
+        } else {
+            // Citizen complaint - assign to default officer if available
+            Officer defaultOfficer = officerService.getDefaultOfficerOrNull();
+            if (defaultOfficer != null) {
+                complaint.setAssignedToId(defaultOfficer.getId());
+                complaint.setAssignedAt(LocalDateTime.now());
+                logger.info("Assigned citizen complaint to default officer: {} ({})",
+                    defaultOfficer.getName(), defaultOfficer.getEmployeeId());
+            } else {
+                logger.warn("No default officer found for citizen complaint. Complaint will remain unassigned.");
+                // Continue without assignment - officer can assign later
+            }
         }
         
         // Save complaint first
@@ -130,8 +142,9 @@ public class ComplaintService {
         return saved;
     }
 
-    public List<Complaint> getComplaintsByCitizen(String citizenMobile) {
-        return complaintRepository.findByCitizenId(citizenMobile);
+    public List<Complaint> getComplaintsByCitizen(String citizenId) {
+        // citizenId is now the MongoDB ID of the citizen (not mobile number)
+        return complaintRepository.findByCitizenId(citizenId);
     }
 
     public List<Complaint> getComplaintsByOfficer(String officerId) {

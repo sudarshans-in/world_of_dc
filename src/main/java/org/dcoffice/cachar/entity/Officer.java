@@ -39,6 +39,7 @@ public class Officer {
 
     private boolean isActive = true;
     private boolean isApproved = false;
+    private boolean isDefault = false; // Default officer for citizen complaints
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -80,6 +81,9 @@ public class Officer {
 
     public boolean isApproved() { return isApproved; }
     public void setApproved(boolean approved) { isApproved = approved; }
+
+    public boolean isDefault() { return isDefault; }
+    public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

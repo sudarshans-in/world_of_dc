@@ -22,9 +22,9 @@ public class Complaint {
     @Indexed(unique = true)
     private String complaintNumber;
 
-    // Store citizen ID instead of reference
+    // Store citizen MongoDB ID to tag complaint to citizen (similar to assignedToId for officers)
     @Indexed
-    private String citizenId;
+    private String citizenId; // MongoDB ID of the citizen
 
     @NotBlank(message = "Subject is required")
     private String subject;
@@ -45,11 +45,9 @@ public class Complaint {
 
     // Store officer IDs instead of references
     @Indexed
-    @NotBlank(message = "Assigned officer is required")
-    private String assignedToId;
+    private String assignedToId; // Can be null for unassigned complaints
     private String assignedById;
-    @NotBlank(message = "Created by officer is required")
-    private String createdById; // Track who created the complaint
+    private String createdById; // Track who created the complaint (officer ID, null for citizen-created complaints)
 
     private String assignmentRemarks;
     private LocalDateTime assignedAt;
@@ -69,6 +67,9 @@ public class Complaint {
     public Complaint() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.documents = new java.util.ArrayList<>();
+        this.history = new java.util.ArrayList<>();
+        this.comments = new java.util.ArrayList<>();
     }
 
     // Getters and Setters

@@ -234,8 +234,8 @@ public class ComplaintService {
         // Check authorization - complaint creator or admin roles can update
         boolean isAdminRole = "ROLE_DISTRICT_COMMISSIONER".equals(currentRole) ||
                               "ROLE_ADDITIONAL_DISTRICT_COMMISSIONER".equals(currentRole);
-        boolean isComplaintCreator = complaint.getCreatedById().equals(currentOfficerId);
-        boolean isComplaintAssignee = complaint.getAssignedToId().equals(currentOfficerId);
+        boolean isComplaintCreator = complaint.getCreatedById() != null && complaint.getCreatedById().equals(currentOfficerId);
+        boolean isComplaintAssignee = complaint.getAssignedToId() != null && complaint.getAssignedToId().equals(currentOfficerId);
 
         if (!isAdminRole && !isComplaintCreator && !isComplaintAssignee) {
             throw new SecurityException("Access denied: Only complaint creator, assignee or admin roles can update complaints");

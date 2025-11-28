@@ -37,8 +37,13 @@ public class Officer {
     @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     private boolean isActive = true;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isApproved")
     private boolean isApproved = false;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isDefault")
     private boolean isDefault = false; // Default officer for citizen complaints
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -33,14 +33,16 @@ public class OfficerService {
         }
 
         officer.setPassword(passwordEncoder.encode(officer.getPassword()));
-        officer.setApproved(true); // Auto-approve officers for testing
+        // Don't override the approved status - preserve what was set by the caller
+        // For direct creation, set approved=true before calling this method if needed
         Officer savedOfficer = officerRepository.save(officer);
-        logger.info("Created new officer: {} with employee ID: {}", officer.getName(), officer.getEmployeeId());
+        logger.info("Created new officer: {} with employee ID: {}, approved: {}", 
+            officer.getName(), officer.getEmployeeId(), officer.isApproved());
         return savedOfficer;
     }
 
     /**
-     * Signup a new officer. Officer will be created with isApproved=true for testing.
+     * Signup a new officer. Officer will be created with isApproved=false, requiring admin approval.
      */
     public Officer signupOfficer(Officer officer) {
         officer.setApproved(false);

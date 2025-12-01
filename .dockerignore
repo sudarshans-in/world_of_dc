@@ -1,7 +1,44 @@
-# Maven - exclude everything except the JAR file
+# Exclude target directory (will be built inside container)
 target/
-!target/world_of_dc-1.0-SNAPSHOT.jar
-pom.xml
+
+# IDE and system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed for build)
+README.md
+DOCKER_DEPLOYMENT_README.md
+
+# Environment files (not needed for build)
+.env
+env.example
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Node modules (if any)
+node_modules/
+
+# Test files (optional - can be included if needed)
+# src/test/
 
 # IDE
 .idea/

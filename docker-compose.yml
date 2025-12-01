@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "${SERVER_PORT:-8080}:8080"
+    env_file:
+      - .env
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       # Spring Boot automatically maps SPRING_DATA_MONGODB_URI to spring.data.mongodb.uri

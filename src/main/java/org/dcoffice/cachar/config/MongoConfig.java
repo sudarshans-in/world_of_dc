@@ -5,22 +5,32 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 @Configuration
 public class MongoConfig implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(MongoConfig.class);
 
+    private final Environment environment;
+    
     @Value("${spring.data.mongodb.uri}")
     private String mongoUri;
 
+    public MongoConfig(Environment environment) {
+        this.environment = environment;
+    }
+
     @Override
     public void run(String... args) {
-        // Mask password in URI for security
-        String maskedUri = maskMongoUri(mongoUri);
+        // Log all MongoDB-related environment variables
         logger.info("========================================");
         logger.info("MongoDB Connection Configuration:");
-        logger.info("URI: {}", maskedUri);
+        logger.info("Environment Variables:");
+        logger.info("  MONGODB_URI: {}", environment.getProperty("MONGODB_URI", "NOT SET"));
+        logger.info("  SPRING_DATA_MONGODB_URI: {}", environment.getProperty("SPRING_DATA_MONGODB_URI", "NOT SET"));
+        logger.info("Spring Properties:");
+        logger.info("  spring.data.mongodb.uri: {}", mongoUri != null ? maskMongoUri(mongoUri) : "NULL");
         logger.info("========================================");
     }
 

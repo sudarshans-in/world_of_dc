@@ -71,6 +71,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/api/complaints/category/**").authenticated()
                 .antMatchers(HttpMethod.GET, "/api/complaints/status/**").authenticated()
                 .antMatchers("/api/files/complaint/**").authenticated()
+                .antMatchers(HttpMethod.POST, "/api/polling-party/upload").permitAll()
                 .antMatchers("/actuator/metrics").authenticated()
                 .antMatchers("/actuator/**").hasRole("ADMIN")
 

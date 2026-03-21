@@ -61,6 +61,7 @@ public class PollingPartyExcelService {
         }
     }
 
+
     private String get(Row row, int index) {
         Cell cell = row.getCell(index);
         if (cell == null) return "";

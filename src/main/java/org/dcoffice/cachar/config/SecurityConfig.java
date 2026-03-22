@@ -57,6 +57,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 // Public polling party search
                 .antMatchers(HttpMethod.GET, "/api/polling-parties/search").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/polling-parties/options").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/polling-parties/materials").permitAll()
+                .antMatchers(HttpMethod.PUT, "/api/polling-parties/materials").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/vehicles/vehicle-id-mappings").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/vehicles/location").permitAll()
+                .antMatchers(HttpMethod.PUT, "/api/vehicles/location").permitAll()
 
                 // Health check and monitoring (public for load balancers)
                 .antMatchers("/actuator/health").permitAll()

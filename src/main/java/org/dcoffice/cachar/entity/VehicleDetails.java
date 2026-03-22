@@ -1,6 +1,5 @@
 package org.dcoffice.cachar.entity;
 
-import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.annotation.Id;
@@ -15,6 +14,7 @@ public class VehicleDetails {
     private String psNo;
     private String psName;
 
+    private String vehicleId;  // Sticker ID assigned to the vehicle
     private String vehicleNo;
     private String driverName;
     private String driverMobile;
@@ -25,8 +25,10 @@ public class VehicleDetails {
     private String remarks;
 
     // 📍 Parking Location (Geo)
-    @GeoSpatialIndexed
     private GeoJsonPoint location;
+
+    // 🕐 Last location update timestamp
+    private Long lastLocationUpdate;
 
     // 🅿️ Parking Address (human readable)
     private String parkingAddress;
@@ -47,6 +49,9 @@ public class VehicleDetails {
 
     public String getPsName() { return psName; }
     public void setPsName(String psName) { this.psName = psName; }
+
+    public String getVehicleId() { return vehicleId; }
+    public void setVehicleId(String vehicleId) { this.vehicleId = vehicleId; }
 
     public String getVehicleNo() { return vehicleNo; }
     public void setVehicleNo(String vehicleNo) { this.vehicleNo = vehicleNo; }
@@ -71,6 +76,9 @@ public class VehicleDetails {
 
     public GeoJsonPoint getLocation() { return location; }
     public void setLocation(GeoJsonPoint location) { this.location = location; }
+
+    public Long getLastLocationUpdate() { return lastLocationUpdate; }
+    public void setLastLocationUpdate(Long lastLocationUpdate) { this.lastLocationUpdate = lastLocationUpdate; }
 
     public String getParkingAddress() { return parkingAddress; }
     public void setParkingAddress(String parkingAddress) { this.parkingAddress = parkingAddress; }

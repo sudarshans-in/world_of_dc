@@ -109,6 +109,7 @@ public class PollingPartyService {
         if (parties.isEmpty()) {
             throw new RuntimeException("No polling party found for psName: " + psName);
         }
+        materials.setSubmitted(true); // Ensure submitted is true if we're updating materials
         if (materials.isSubmitted() && materials.getSubmittedAt() == null) {
             materials.setSubmittedAt(System.currentTimeMillis());
         }

@@ -2,10 +2,8 @@ package org.dcoffice.cachar.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import java.util.List;
 
-import lombok.Data;
-
-@Data
 @Document(collection = "polling_party")
 public class PollingParty {
 
@@ -16,107 +14,109 @@ public class PollingParty {
     private String psNo;
     private String psName;
     private String partyNo;
-    private String presidingOfficer;
-    private String pollingOfficer1;
-    private String pollingOfficer2;
-    private String pollingOfficer3;
-    private String reserveOfficer;
-    private String mobile;
+    private List<Member> members;
+    private String vehicleId;
     private Long uploadTime;
 
-    public String getId() {
-        return id;
-    }
+    private Materials materials;
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public String getAcNo() {
-        return acNo;
-    }
+    public String getAcNo() { return acNo; }
+    public void setAcNo(String acNo) { this.acNo = acNo; }
 
-    public void setAcNo(String acNo) {
-        this.acNo = acNo;
-    }
+    public String getPsNo() { return psNo; }
+    public void setPsNo(String psNo) { this.psNo = psNo; }
 
-    public String getPsNo() {
-        return psNo;
-    }
+    public String getPsName() { return psName; }
+    public void setPsName(String psName) { this.psName = psName; }
 
-    public void setPsNo(String psNo) {
-        this.psNo = psNo;
-    }
+    public String getPartyNo() { return partyNo; }
+    public void setPartyNo(String partyNo) { this.partyNo = partyNo; }
 
-    public String getPsName() {
-        return psName;
-    }
+    public List<Member> getMembers() { return members; }
+    public void setMembers(List<Member> members) { this.members = members; }
 
-    public void setPsName(String psName) {
-        this.psName = psName;
-    }
+    public String getVehicleId() { return vehicleId; }
+    public void setVehicleId(String vehicleId) { this.vehicleId = vehicleId; }
 
-    public String getPartyNo() {
-        return partyNo;
-    }
+    public Long getUploadTime() { return uploadTime; }
+    public void setUploadTime(Long uploadTime) { this.uploadTime = uploadTime; }
 
-    public void setPartyNo(String partyNo) {
-        this.partyNo = partyNo;
-    }
+    public Materials getMaterials() { return materials; }
+    public void setMaterials(Materials materials) { this.materials = materials; }
 
+    // Backward compatibility getters for old field names
+    @Deprecated
     public String getPresidingOfficer() {
-        return presidingOfficer;
+        if (members != null) {
+            return members.stream()
+                    .filter(m -> "PRESIDING_OFFICER".equals(m.getRole()))
+                    .map(Member::getName)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 
-    public void setPresidingOfficer(String presidingOfficer) {
-        this.presidingOfficer = presidingOfficer;
-    }
-
+    @Deprecated
     public String getPollingOfficer1() {
-        return pollingOfficer1;
+        if (members != null) {
+            return members.stream()
+                    .filter(m -> "POLLING_OFFICER_1".equals(m.getRole()))
+                    .map(Member::getName)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 
-    public void setPollingOfficer1(String pollingOfficer1) {
-        this.pollingOfficer1 = pollingOfficer1;
-    }
-
+    @Deprecated
     public String getPollingOfficer2() {
-        return pollingOfficer2;
+        if (members != null) {
+            return members.stream()
+                    .filter(m -> "POLLING_OFFICER_2".equals(m.getRole()))
+                    .map(Member::getName)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 
-    public void setPollingOfficer2(String pollingOfficer2) {
-        this.pollingOfficer2 = pollingOfficer2;
-    }
-
+    @Deprecated
     public String getPollingOfficer3() {
-        return pollingOfficer3;
+        if (members != null) {
+            return members.stream()
+                    .filter(m -> "POLLING_OFFICER_3".equals(m.getRole()))
+                    .map(Member::getName)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 
-    public void setPollingOfficer3(String pollingOfficer3) {
-        this.pollingOfficer3 = pollingOfficer3;
-    }
-
+    @Deprecated
     public String getReserveOfficer() {
-        return reserveOfficer;
+        if (members != null) {
+            return members.stream()
+                    .filter(m -> "RESERVE_OFFICER".equals(m.getRole()))
+                    .map(Member::getName)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 
-    public void setReserveOfficer(String reserveOfficer) {
-        this.reserveOfficer = reserveOfficer;
-    }
-
+    @Deprecated
     public String getMobile() {
-        return mobile;
-    }
-
-    public void setMobile(String mobile) {
-        this.mobile = mobile;
-    }
-
-    public Long getUploadTime() {
-        return uploadTime;
-    }
-
-    public void setUploadTime(Long uploadTime) {
-        this.uploadTime = uploadTime;
+        if (members != null) {
+            return members.stream()
+                    .filter(m -> m.getMobile() != null && !m.getMobile().isBlank())
+                    .map(Member::getMobile)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 }

@@ -33,6 +33,46 @@ public class VehicleService {
                 .collect(Collectors.toList());
     }
 
+    // Returns list of { vehicleId, vehicleNo } mappings for UI options
+    public List<java.util.Map<String, String>> fetchVehicleIdMappings() {
+        return repository.findAllVehicleIdAndVehicleNo().stream()
+                .filter(v -> v.getVehicleId() != null && !v.getVehicleId().isBlank())
+                .map(v -> {
+                    java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+                    map.put("vehicleId", v.getVehicleId());
+                    map.put("vehicleNo", v.getVehicleNo());
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public VehicleDetails fetchLocationByVehicleId(String vehicleId) {
+        return repository.findByVehicleId(vehicleId)
+                .orElseThrow(() -> new RuntimeException("Vehicle not found for vehicleId: " + vehicleId));
+    }
+
+    public VehicleDetails updateLocationByVehicleId(String vehicleId, VehicleDetails src) {
+        VehicleDetails existing = repository.findByVehicleId(vehicleId)
+                .orElseThrow(() -> new RuntimeException("Vehicle not found for vehicleId: " + vehicleId));
+        boolean locationUpdated = false;
+        if (src.getLocation() != null) {
+            existing.setLocation(src.getLocation());
+            locationUpdated = true;
+        }
+        if (src.getParkingAddress() != null) {
+            existing.setParkingAddress(src.getParkingAddress());
+            locationUpdated = true;
+        }
+        if (src.getStatusComment() != null) {
+            existing.setStatusComment(src.getStatusComment());
+        }
+        // Auto-update lastLocationUpdate timestamp when location changes
+        if (locationUpdated) {
+            existing.setLastLocationUpdate(System.currentTimeMillis());
+        }
+        return repository.save(existing);
+    }
+
     public VehicleDetails create(VehicleDetails vehicle) {
         vehicle.setId(null); // ensure Mongo generates an ID
         vehicle.setUploadTime(System.currentTimeMillis());
@@ -82,8 +122,18 @@ public class VehicleService {
         if (src.getCapacity() != null)    target.setCapacity(src.getCapacity());
         if (src.getRoute() != null)       target.setRoute(src.getRoute());
         if (src.getRemarks() != null)     target.setRemarks(src.getRemarks());
-        if (src.getLocation() != null)    target.setLocation(src.getLocation());
-        if (src.getParkingAddress() != null) target.setParkingAddress(src.getParkingAddress());
+        if (src.getLocation() != null) {
+            target.setLocation(src.getLocation());
+            target.setLastLocationUpdate(System.currentTimeMillis());
+        }
+        if (src.getParkingAddress() != null) {
+            target.setParkingAddress(src.getParkingAddress());
+            if (src.getLocation() == null) {
+                target.setLastLocationUpdate(System.currentTimeMillis());
+            }
+        }
         if (src.getStatusComment() != null)  target.setStatusComment(src.getStatusComment());
+        if (src.getVehicleId() != null)   target.setVehicleId(src.getVehicleId());
+        if (src.getLastLocationUpdate() != null) target.setLastLocationUpdate(src.getLastLocationUpdate());
     }
 }

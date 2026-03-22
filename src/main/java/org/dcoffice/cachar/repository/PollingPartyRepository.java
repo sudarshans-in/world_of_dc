@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PollingPartyRepository extends MongoRepository<PollingParty, String> {
+
+    java.util.List<PollingParty> findByPsName(String psName);
 }

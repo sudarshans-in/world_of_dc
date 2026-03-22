@@ -15,9 +15,13 @@ public interface VehicleRepository extends MongoRepository<VehicleDetails, Strin
 
     Optional<VehicleDetails> findByVehicleNo(String vehicleNo);
 
-    void deleteByPsName(String psName);
+    Optional<VehicleDetails> findByVehicleId(String vehicleId);
 
+    void deleteByPsName(String psName);
     void deleteByVehicleNo(String vehicleNo);
+
+    @Query(value = "{}", fields = "{ 'vehicleId': 1, 'vehicleNo': 1, '_id': 0 }")
+    List<VehicleDetails> findAllVehicleIdAndVehicleNo();
 
     @Query(value = "{}", fields = "{ 'vehicleNo': 1, '_id': 0 }")
     List<VehicleDetails> findAllVehicleNos();

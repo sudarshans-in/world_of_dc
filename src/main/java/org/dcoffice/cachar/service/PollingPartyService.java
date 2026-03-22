@@ -1,5 +1,7 @@
 package org.dcoffice.cachar.service;
 
+import org.dcoffice.cachar.entity.Materials;
+import org.dcoffice.cachar.entity.Member;
 import org.dcoffice.cachar.entity.PollingParty;
 import org.dcoffice.cachar.repository.PollingPartyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,5 +86,67 @@ public class PollingPartyService {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    public java.util.List<Materials> getMaterialsByPsName(String psName) {
+        java.util.List<PollingParty> parties = pollingPartyRepository.findByPsName(psName);
+        if (parties.isEmpty()) {
+            throw new RuntimeException("No polling party found for psName: " + psName);
+        }
+        return parties.stream()
+                .map(p -> p.getMaterials() != null ? p.getMaterials() : Materials.defaultMaterials())
+                .collect(Collectors.toList());
+    }
+
+    public java.util.List<Materials> updateMaterialsByPsName(String psName, Materials materials) {
+        java.util.List<PollingParty> parties = pollingPartyRepository.findByPsName(psName);
+        if (parties.isEmpty()) {
+            throw new RuntimeException("No polling party found for psName: " + psName);
+        }
+        if (materials.isSubmitted() && materials.getSubmittedAt() == null) {
+            materials.setSubmittedAt(System.currentTimeMillis());
+        }
+        parties.forEach(p -> p.setMaterials(materials));
+        pollingPartyRepository.saveAll(parties);
+        return parties.stream().map(PollingParty::getMaterials).collect(Collectors.toList());
+    }
+
+    public java.util.List<Member> getMembersByPsName(String psName) {
+        java.util.List<PollingParty> parties = pollingPartyRepository.findByPsName(psName);
+        if (parties.isEmpty()) {
+            throw new RuntimeException("No polling party found for psName: " + psName);
+        }
+        return parties.stream()
+                .filter(p -> p.getMembers() != null)
+                .flatMap(p -> p.getMembers().stream())
+                .collect(Collectors.toList());
+    }
+
+    public java.util.List<Member> updateMembersByPsName(String psName, java.util.List<Member> members) {
+        java.util.List<PollingParty> parties = pollingPartyRepository.findByPsName(psName);
+        if (parties.isEmpty()) {
+            throw new RuntimeException("No polling party found for psName: " + psName);
+        }
+        parties.forEach(p -> p.setMembers(members));
+        pollingPartyRepository.saveAll(parties);
+        return members;
+    }
+
+    public String getVehicleIdByPsName(String psName) {
+        java.util.List<PollingParty> parties = pollingPartyRepository.findByPsName(psName);
+        if (parties.isEmpty()) {
+            throw new RuntimeException("No polling party found for psName: " + psName);
+        }
+        return parties.get(0).getVehicleId();
+    }
+
+    public String updateVehicleIdByPsName(String psName, String vehicleId) {
+        java.util.List<PollingParty> parties = pollingPartyRepository.findByPsName(psName);
+        if (parties.isEmpty()) {
+            throw new RuntimeException("No polling party found for psName: " + psName);
+        }
+        parties.forEach(p -> p.setVehicleId(vehicleId));
+        pollingPartyRepository.saveAll(parties);
+        return vehicleId;
     }
 }

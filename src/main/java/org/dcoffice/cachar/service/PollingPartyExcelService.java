@@ -2,6 +2,7 @@ package org.dcoffice.cachar.service;
 
 import org.apache.poi.ss.usermodel.*;
 import org.dcoffice.cachar.entity.PollingParty;
+import org.dcoffice.cachar.entity.Member;
 import org.dcoffice.cachar.repository.PollingPartyRepository;
 import org.springframework.stereotype.Service;
 
@@ -41,13 +42,35 @@ public class PollingPartyExcelService {
                 p.setPsName(get(row, 2));
                 p.setPartyNo(get(row, 3));
 
-                p.setPresidingOfficer(get(row, 4));
-                p.setPollingOfficer1(get(row, 5));
-                p.setPollingOfficer2(get(row, 6));
-                p.setPollingOfficer3(get(row, 7));
-
-                p.setReserveOfficer(get(row, 8));
-                p.setMobile(get(row, 9));
+                // Create members list with roles
+                List<Member> members = new ArrayList<>();
+                
+                String presidingOfficer = get(row, 4);
+                if (!presidingOfficer.isBlank()) {
+                    members.add(new Member("PRESIDING_OFFICER", presidingOfficer, get(row, 9)));
+                }
+                
+                String pollingOfficer1 = get(row, 5);
+                if (!pollingOfficer1.isBlank()) {
+                    members.add(new Member("POLLING_OFFICER_1", pollingOfficer1, ""));
+                }
+                
+                String pollingOfficer2 = get(row, 6);
+                if (!pollingOfficer2.isBlank()) {
+                    members.add(new Member("POLLING_OFFICER_2", pollingOfficer2, ""));
+                }
+                
+                String pollingOfficer3 = get(row, 7);
+                if (!pollingOfficer3.isBlank()) {
+                    members.add(new Member("POLLING_OFFICER_3", pollingOfficer3, ""));
+                }
+                
+                String reserveOfficer = get(row, 8);
+                if (!reserveOfficer.isBlank()) {
+                    members.add(new Member("RESERVE_OFFICER", reserveOfficer, ""));
+                }
+                
+                p.setMembers(members);
 
                 p.setUploadTime(System.currentTimeMillis());
 

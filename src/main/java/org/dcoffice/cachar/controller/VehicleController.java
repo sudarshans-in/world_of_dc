@@ -80,6 +80,58 @@ public class VehicleController {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // 🆔 Fetch vehicleId → vehicleNo mappings (UI options)
+    // GET /api/vehicles/vehicle-id-mappings
+    // ─────────────────────────────────────────────────────────────
+    @GetMapping("/vehicle-id-mappings")
+    public ResponseEntity<ApiResponse<List<java.util.Map<String, String>>>> fetchVehicleIdMappings() {
+        List<java.util.Map<String, String>> mappings = vehicleService.fetchVehicleIdMappings();
+        return ResponseEntity.ok(ApiResponse.success("Vehicle ID mappings fetched", mappings));
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 📍 Fetch location details by vehicleId
+    // GET /api/vehicles/location?vehicleId=STICKER001
+    // Returns: full vehicle record with location, parkingAddress, statusComment, lastLocationUpdate
+    // ─────────────────────────────────────────────────────────────
+    @GetMapping("/location")
+    public ResponseEntity<ApiResponse<VehicleDetails>> fetchLocation(
+            @RequestParam String vehicleId) {
+        try {
+            VehicleDetails vehicle = vehicleService.fetchLocationByVehicleId(vehicleId);
+            return ResponseEntity.ok(ApiResponse.success("Location fetched", vehicle));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to fetch location: " + e.getMessage()));
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ✏️ Update location details by vehicleId
+    // PUT /api/vehicles/location?vehicleId=STICKER001
+    // Body: { "location": {...}, "parkingAddress": "...", "statusComment": "..." }
+    // Note: lastLocationUpdate is automatically set when location or parkingAddress changes
+    // ─────────────────────────────────────────────────────────────
+    @PutMapping("/location")
+    public ResponseEntity<ApiResponse<VehicleDetails>> updateLocation(
+            @RequestParam String vehicleId,
+            @RequestBody VehicleDetails updated) {
+        try {
+            VehicleDetails result = vehicleService.updateLocationByVehicleId(vehicleId, updated);
+            return ResponseEntity.ok(ApiResponse.success("Location updated", result));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to update location: " + e.getMessage()));
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // ➕ Create vehicle
     // POST /api/vehicles
     // ─────────────────────────────────────────────────────────────

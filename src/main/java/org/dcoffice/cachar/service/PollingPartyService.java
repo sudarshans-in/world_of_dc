@@ -12,7 +12,9 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,7 +26,7 @@ public class PollingPartyService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public List<PollingParty> searchPollingParties(String psName, String partyNo, String mobile) {
+    public List<PollingParty> searchPollingParties(String psName, String mobile) {
         Query query = new Query();
         List<Criteria> criteriaList = new ArrayList<>();
 
@@ -33,13 +35,8 @@ public class PollingPartyService {
                     .is(psName.trim()));
         }
 
-        if (hasText(partyNo)) {
-            criteriaList.add(Criteria.where("partyNo")
-                    .is(partyNo.trim()));
-        }
-
         if (hasText(mobile)) {
-            criteriaList.add(Criteria.where("mobile")
+            criteriaList.add(Criteria.where("members.mobile")
                     .is(mobile.trim()));
         }
 
@@ -53,7 +50,16 @@ public class PollingPartyService {
             return pollingPartyRepository.findAll(Sort.by(Sort.Direction.ASC, "psNo"));
         }
 
-        return mongoTemplate.find(query, PollingParty.class);
+        List<PollingParty> results = mongoTemplate.find(query, PollingParty.class);
+
+        // Guard against duplicate documents if data/query expansion ever returns repeated IDs.
+        Map<String, PollingParty> distinctById = new LinkedHashMap<>();
+        for (PollingParty party : results) {
+            if (party.getId() != null) {
+                distinctById.putIfAbsent(party.getId(), party);
+            }
+        }
+        return new ArrayList<>(distinctById.values());
     }
 
     public List<String> getAllPollingStations() {

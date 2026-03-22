@@ -1,5 +1,6 @@
 package org.dcoffice.cachar.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.List;
@@ -49,6 +50,7 @@ public class PollingParty {
 
     // Backward compatibility getters for old field names
     @Deprecated
+    @JsonIgnore
     public String getPresidingOfficer() {
         if (members != null) {
             return members.stream()
@@ -61,6 +63,7 @@ public class PollingParty {
     }
 
     @Deprecated
+    @JsonIgnore
     public String getPollingOfficer1() {
         if (members != null) {
             return members.stream()
@@ -73,6 +76,7 @@ public class PollingParty {
     }
 
     @Deprecated
+    @JsonIgnore
     public String getPollingOfficer2() {
         if (members != null) {
             return members.stream()
@@ -85,6 +89,7 @@ public class PollingParty {
     }
 
     @Deprecated
+    @JsonIgnore
     public String getPollingOfficer3() {
         if (members != null) {
             return members.stream()
@@ -97,6 +102,7 @@ public class PollingParty {
     }
 
     @Deprecated
+    @JsonIgnore
     public String getReserveOfficer() {
         if (members != null) {
             return members.stream()
@@ -109,6 +115,7 @@ public class PollingParty {
     }
 
     @Deprecated
+    @JsonIgnore
     public String getMobile() {
         if (members != null) {
             return members.stream()

@@ -42,10 +42,9 @@ public class PollingPartyController {
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<PollingParty>>> searchPollingParties(
             @RequestParam(value = "psName", required = false) String psName,
-            @RequestParam(value = "partyNo", required = false) String partyNo,
             @RequestParam(value = "mobile", required = false) String mobile) {
         try {
-            List<PollingParty> pollingParties = pollingPartyService.searchPollingParties(psName, partyNo, mobile);
+            List<PollingParty> pollingParties = pollingPartyService.searchPollingParties(psName, mobile);
             return ResponseEntity.ok(ApiResponse.success("Polling parties retrieved successfully", pollingParties));
         } catch (Exception e) {
             logger.error("Failed to search polling parties: {}", e.getMessage(), e);

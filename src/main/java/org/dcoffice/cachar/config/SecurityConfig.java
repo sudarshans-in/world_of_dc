@@ -62,6 +62,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/api/vehicles/vehicle-id-mappings").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/vehicles/location").permitAll()
                 .antMatchers(HttpMethod.PUT, "/api/vehicles/location").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/election-complaints").permitAll()
+                .antMatchers(HttpMethod.POST, "/api/election-complaints").permitAll()
+                .antMatchers(HttpMethod.POST, "/api/election-complaints/create").permitAll()
 
                 // Health check and monitoring (public for load balancers)
                 .antMatchers("/actuator/health").permitAll()

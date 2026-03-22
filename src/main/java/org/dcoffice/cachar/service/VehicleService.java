@@ -59,13 +59,16 @@ public class VehicleService {
             existing.setLocation(src.getLocation());
             locationUpdated = true;
         }
-        if (src.getParkingAddress() != null) {
-            existing.setParkingAddress(src.getParkingAddress());
-            locationUpdated = true;
+        if (src.getRemarks() != null) {
+            existing.setRemarks(src.getRemarks());
         }
-        if (src.getStatusComment() != null) {
-            existing.setStatusComment(src.getStatusComment());
-        }
+        // if (src.getParkingAddress() != null) {
+        //     existing.setParkingAddress(src.getParkingAddress());
+        //     locationUpdated = true;
+        // }
+        // if (src.getStatusComment() != null) {
+        //     existing.setStatusComment(src.getStatusComment());
+        // }
         // Auto-update lastLocationUpdate timestamp when location changes
         if (locationUpdated) {
             existing.setLastLocationUpdate(System.currentTimeMillis());

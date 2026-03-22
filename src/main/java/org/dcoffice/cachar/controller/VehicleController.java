@@ -1,9 +1,11 @@
 package org.dcoffice.cachar.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.dcoffice.cachar.dto.ApiResponse;
 import org.dcoffice.cachar.entity.VehicleDetails;
 import org.dcoffice.cachar.service.VehicleExcelService;
 import org.dcoffice.cachar.service.VehicleService;
+import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -118,8 +120,35 @@ public class VehicleController {
     @PutMapping("/location")
     public ResponseEntity<ApiResponse<VehicleDetails>> updateLocation(
             @RequestParam String vehicleId,
-            @RequestBody VehicleDetails updated) {
+            @RequestBody JsonNode payload) {
         try {
+            VehicleDetails updated = new VehicleDetails();
+
+            JsonNode locationNode = payload.get("location");
+            if (locationNode != null && !locationNode.isNull()) {
+                GeoJsonPoint parsedLocation = parseLocation(locationNode);
+                if (parsedLocation == null) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Invalid location format. Use {\"location\":{\"x\":<lng>,\"y\":<lat>}} or GeoJSON coordinates."));
+                }
+                updated.setLocation(parsedLocation);
+            }
+
+            JsonNode remarksNode = payload.get("remarks");
+            if (remarksNode != null && !remarksNode.isNull()) {
+                updated.setRemarks(remarksNode.asText());
+            }
+
+            JsonNode parkingAddressNode = payload.get("parkingAddress");
+            if (parkingAddressNode != null && !parkingAddressNode.isNull()) {
+                updated.setParkingAddress(parkingAddressNode.asText());
+            }
+
+            JsonNode statusCommentNode = payload.get("statusComment");
+            if (statusCommentNode != null && !statusCommentNode.isNull()) {
+                updated.setStatusComment(statusCommentNode.asText());
+            }
+
             VehicleDetails result = vehicleService.updateLocationByVehicleId(vehicleId, updated);
             return ResponseEntity.ok(ApiResponse.success("Location updated", result));
         } catch (RuntimeException e) {
@@ -129,6 +158,27 @@ public class VehicleController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to update location: " + e.getMessage()));
         }
+    }
+
+    private GeoJsonPoint parseLocation(JsonNode locationNode) {
+        // Supports {"x": <longitude>, "y": <latitude>}
+        if (locationNode.hasNonNull("x") && locationNode.hasNonNull("y")) {
+            return new GeoJsonPoint(locationNode.get("x").asDouble(), locationNode.get("y").asDouble());
+        }
+
+        // Supports {"longitude": <longitude>, "latitude": <latitude>}
+        if (locationNode.hasNonNull("longitude") && locationNode.hasNonNull("latitude")) {
+            return new GeoJsonPoint(locationNode.get("longitude").asDouble(), locationNode.get("latitude").asDouble());
+        }
+
+        // Supports GeoJSON-like payloads with coordinates array: [longitude, latitude]
+        JsonNode coordinates = locationNode.get("coordinates");
+        if (coordinates != null && coordinates.isArray() && coordinates.size() >= 2
+                && coordinates.get(0).isNumber() && coordinates.get(1).isNumber()) {
+            return new GeoJsonPoint(coordinates.get(0).asDouble(), coordinates.get(1).asDouble());
+        }
+
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────

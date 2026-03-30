@@ -68,6 +68,10 @@ public class TrackingService {
         return trackingSquadRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
     }
 
+    public List<TrackingMember> getAllMembers() {
+        return trackingMemberRepository.findAllByOrderByNameAsc();
+    }
+
     public TrackingSquad createSquad(CreateTrackingSquadRequest request) {
         String squadId = normalizeId(request.getId(), "sq");
         if (trackingSquadRepository.existsById(squadId)) {
@@ -83,8 +87,11 @@ public class TrackingService {
     }
 
     public TrackingMember createMember(CreateTrackingMemberRequest request) {
-        String squadId = request.getSquadId().trim();
-        requireSquad(squadId);
+        String squadId = null;
+        if (request.getSquadId() != null && !request.getSquadId().trim().isEmpty()) {
+            squadId = request.getSquadId().trim();
+            requireSquad(squadId);
+        }
 
         String memberId = normalizeId(request.getId(), "mem");
         if (trackingMemberRepository.existsById(memberId)) {
@@ -107,7 +114,7 @@ public class TrackingService {
 
         TrackingMember saved = trackingMemberRepository.save(member);
 
-        if (saved.getAddress() != null) {
+        if (saved.getAddress() != null && saved.getSquadId() != null) {
             TrackingActivity activity = new TrackingActivity();
             activity.setSquadId(saved.getSquadId());
             activity.setMemberId(saved.getId());
@@ -152,6 +159,10 @@ public class TrackingService {
         TrackingMember member = trackingMemberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found with id: " + memberId));
 
+        if (request.getSquadId() != null && !request.getSquadId().trim().isEmpty()) {
+            requireSquad(request.getSquadId().trim());
+            member.setSquadId(request.getSquadId().trim());
+        }
         if (request.getName() != null && !request.getName().trim().isEmpty()) {
             member.setName(request.getName().trim());
         }

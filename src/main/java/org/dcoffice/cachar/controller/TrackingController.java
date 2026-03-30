@@ -87,6 +87,18 @@ public class TrackingController {
         }
     }
 
+    @GetMapping("/members")
+    public ResponseEntity<ApiResponse<List<TrackingMember>>> getAllMembers() {
+        try {
+            List<TrackingMember> members = trackingService.getAllMembers();
+            return ResponseEntity.ok(ApiResponse.success("Tracking members fetched successfully", members));
+        } catch (Exception e) {
+            logger.error("Failed to fetch members: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to fetch members: " + e.getMessage()));
+        }
+    }
+
     @PutMapping("/members/{memberId}")
     public ResponseEntity<ApiResponse<TrackingMember>> updateMember(
             @PathVariable String memberId,

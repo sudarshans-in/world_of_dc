@@ -53,6 +53,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/api/citizen/portal-stats").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/complaints/track/**").permitAll()
                 .antMatchers(HttpMethod.GET, "/api/files/download/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/api/tracking/**").permitAll()
+                .antMatchers(HttpMethod.POST, "/api/tracking/**").permitAll()
+                .antMatchers(HttpMethod.PUT, "/api/tracking/**").permitAll()
 
                 // Public polling party search
                 .antMatchers(HttpMethod.GET, "/api/polling-parties/search").permitAll()

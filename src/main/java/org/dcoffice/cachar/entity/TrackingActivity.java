@@ -30,6 +30,14 @@ public class TrackingActivity {
     @Indexed
     private Instant timestamp;
 
+    @Indexed
+    private String type; // LOGIN, LOGOUT, PHOTO — null for legacy activities
+
+    private Double latitude;
+    private Double longitude;
+    private Double accuracy;
+    private String notes;
+
     private List<String> attachments = new ArrayList<>();
 
     public String getId() {
@@ -95,4 +103,19 @@ public class TrackingActivity {
     public void setAttachments(List<String> attachments) {
         this.attachments = attachments != null ? attachments : new ArrayList<>();
     }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public Double getAccuracy() { return accuracy; }
+    public void setAccuracy(Double accuracy) { this.accuracy = accuracy; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

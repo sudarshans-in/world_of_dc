@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.Map;
 import org.dcoffice.cachar.entity.Citizen;
 import org.dcoffice.cachar.entity.Officer;
+import org.dcoffice.cachar.entity.TrackingMember;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 
@@ -50,6 +51,12 @@ public class JwtService {
         claims.put("role", officer.getRole() != null ? officer.getRole().name() : "OFFICER");
         claims.put("employeeId", officer.getEmployeeId());
         return generateToken(officer.getId(), claims);
+    }
+
+    public String generateTokenForWorker(TrackingMember member) {
+        Map<String, Object> claims = new java.util.HashMap<>();
+        claims.put("role", member.isAdmin() ? "WORKER_ADMIN" : "WORKER");
+        return generateToken(member.getId(), claims);
     }
 
     public Claims parseToken(String token) {

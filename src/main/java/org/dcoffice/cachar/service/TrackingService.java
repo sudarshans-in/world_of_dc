@@ -99,6 +99,7 @@ public class TrackingService {
         member.setPhone(blankToNull(request.getPhone()));
         member.setStatus(defaultStatus(request.getStatus()));
         member.setAddress(blankToNull(request.getAddress()));
+        member.setCreatedAt(Instant.now());
         if (request.getLatitude() != null && request.getLongitude() != null) {
             member.setLocation(new GeoJsonPoint(request.getLongitude(), request.getLatitude()));
             member.setLastUpdate(Instant.now());

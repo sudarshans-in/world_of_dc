@@ -1,6 +1,7 @@
 package org.dcoffice.cachar.config;
 
 import io.jsonwebtoken.Claims;
+import org.dcoffice.cachar.repository.TrackingMemberRepository;
 import org.dcoffice.cachar.service.CitizenService;
 import org.dcoffice.cachar.service.JwtService;
 import org.dcoffice.cachar.service.OfficerService;
@@ -26,11 +27,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final CitizenService citizenService;
     private final OfficerService officerService;
+    private final TrackingMemberRepository trackingMemberRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, CitizenService citizenService, OfficerService officerService) {
+    public JwtAuthenticationFilter(JwtService jwtService, CitizenService citizenService,
+                                   OfficerService officerService, TrackingMemberRepository trackingMemberRepository) {
         this.jwtService = jwtService;
         this.citizenService = citizenService;
         this.officerService = officerService;
+        this.trackingMemberRepository = trackingMemberRepository;
     }
 
     @Override
@@ -93,6 +97,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             switch (role) {
                 case "CITIZEN":
                     return citizenService.findById(userId).orElse(null);
+                case "WORKER":
+                case "WORKER_ADMIN":
+                    return trackingMemberRepository.findById(userId).orElse(null);
                 case "ADMIN":
                 case "OFFICER":
                 case "DISTRICT_COMMISSIONER":

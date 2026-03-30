@@ -3,6 +3,7 @@ package org.dcoffice.cachar.config;
 import org.dcoffice.cachar.service.CitizenService;
 import org.dcoffice.cachar.service.JwtService;
 import org.dcoffice.cachar.service.OfficerService;
+import org.dcoffice.cachar.repository.TrackingMemberRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +35,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Lazy
     private OfficerService officerService;
 
+    @Autowired
+    @Lazy
+    private TrackingMemberRepository trackingMemberRepository;
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
@@ -45,6 +50,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
 
                 // ===== PUBLIC ENDPOINTS =====
+                .antMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                .antMatchers(HttpMethod.POST, "/auth/signup").permitAll()
                 .antMatchers("/api/citizen/send-otp").permitAll()
                 .antMatchers("/api/citizen/verify-otp").permitAll()
                 .antMatchers("/api/citizen/register").permitAll()
@@ -56,6 +63,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(HttpMethod.GET, "/api/tracking/**").permitAll()
                 .antMatchers(HttpMethod.POST, "/api/tracking/**").permitAll()
                 .antMatchers(HttpMethod.PUT, "/api/tracking/**").permitAll()
+                .antMatchers(HttpMethod.DELETE, "/api/tracking/**").permitAll()
 
                 // Public polling party search
                 .antMatchers(HttpMethod.GET, "/api/polling-parties/search").permitAll()
@@ -141,6 +149,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService, citizenService, officerService);
+        return new JwtAuthenticationFilter(jwtService, citizenService, officerService, trackingMemberRepository);
     }
 }

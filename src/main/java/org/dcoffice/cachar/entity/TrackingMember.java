@@ -32,6 +32,8 @@ public class TrackingMember {
 
     private String address;
     private Instant lastUpdate;
+    private boolean admin = false;
+    private Instant createdAt;
 
     public String getId() {
         return id;
@@ -103,5 +105,21 @@ public class TrackingMember {
 
     public void setLastUpdate(Instant lastUpdate) {
         this.lastUpdate = lastUpdate;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }

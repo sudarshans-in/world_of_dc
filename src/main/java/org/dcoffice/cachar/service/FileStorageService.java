@@ -195,4 +195,17 @@ public class FileStorageService {
         int lastDotIndex = fileName.lastIndexOf(".");
         return lastDotIndex == -1 ? "" : fileName.substring(lastDotIndex + 1);
     }
+
+    public void deleteFile(String relativePath) {
+        try {
+            Path filePath = this.fileStorageLocation.resolve(relativePath).normalize();
+            if (!filePath.startsWith(this.fileStorageLocation)) {
+                throw new FileStorageException("Invalid file path: " + relativePath);
+            }
+            Files.deleteIfExists(filePath);
+            logger.info("Deleted file: {}", relativePath);
+        } catch (IOException e) {
+            throw new FileStorageException("Could not delete file: " + relativePath, e);
+        }
+    }
 }

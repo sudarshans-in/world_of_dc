@@ -12,6 +12,8 @@ public interface TrackingMemberRepository extends MongoRepository<TrackingMember
 
     List<TrackingMember> findBySquadIdOrderByNameAsc(String squadId);
 
+    List<TrackingMember> findAllByOrderByNameAsc();
+
     Optional<TrackingMember> findByIdAndSquadId(String id, String squadId);
 
     Optional<TrackingMember> findByPhone(String phone);

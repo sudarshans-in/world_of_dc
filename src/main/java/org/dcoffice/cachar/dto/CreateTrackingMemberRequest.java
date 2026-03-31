@@ -6,7 +6,6 @@ public class CreateTrackingMemberRequest {
 
     private String id;
 
-    @NotBlank(message = "squadId is required")
     private String squadId;
 
     @NotBlank(message = "Member name is required")

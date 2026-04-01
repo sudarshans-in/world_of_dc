@@ -44,9 +44,11 @@ public class TrackingController {
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<TrackingDashboardResponseDto>> getDashboard(
             @RequestParam(value = "squadId", required = false) String squadId,
-            @RequestParam(value = "activityLimit", required = false) Integer activityLimit) {
+            @RequestParam(value = "activityLimit", required = false) Integer activityLimit,
+            @RequestParam(value = "dateFrom", required = false) String dateFrom,
+            @RequestParam(value = "dateTo", required = false) String dateTo) {
         try {
-            TrackingDashboardResponseDto dashboard = trackingService.getDashboard(squadId, activityLimit);
+            TrackingDashboardResponseDto dashboard = trackingService.getDashboard(squadId, activityLimit, dateFrom, dateTo);
             return ResponseEntity.ok(ApiResponse.success("Tracking dashboard fetched successfully", dashboard));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));

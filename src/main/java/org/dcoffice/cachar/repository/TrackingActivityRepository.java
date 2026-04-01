@@ -14,7 +14,11 @@ public interface TrackingActivityRepository extends MongoRepository<TrackingActi
 
     Page<TrackingActivity> findBySquadId(String squadId, Pageable pageable);
 
+    Page<TrackingActivity> findBySquadIdAndTimestampBetween(String squadId, Instant start, Instant end, Pageable pageable);
+
     Page<TrackingActivity> findBySquadIdAndMemberId(String squadId, String memberId, Pageable pageable);
+
+    Page<TrackingActivity> findBySquadIdAndMemberIdAndTimestampBetween(String squadId, String memberId, Instant start, Instant end, Pageable pageable);
 
     // Worker attendance and photo queries
     List<TrackingActivity> findByMemberIdAndTypeInAndTimestampBetweenOrderByTimestampDesc(

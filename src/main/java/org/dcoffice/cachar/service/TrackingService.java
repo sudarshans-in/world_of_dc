@@ -22,6 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,17 +47,18 @@ public class TrackingService {
     @Autowired
     private FileStorageService fileStorageService;
 
-    public TrackingDashboardResponseDto getDashboard(String squadId, Integer activityLimit) {
+    public TrackingDashboardResponseDto getDashboard(String squadId, Integer activityLimit, String dateFrom, String dateTo) {
         List<TrackingDashboardItemDto> items = new ArrayList<>();
         int resolvedLimit = resolveLimit(activityLimit);
+        Instant[] dateRange = parseDateRange(dateFrom, dateTo);
 
         if (squadId != null && !squadId.trim().isEmpty()) {
             TrackingSquad squad = requireSquad(squadId.trim());
-            items.add(buildDashboardItem(squad, resolvedLimit));
+            items.add(buildDashboardItem(squad, resolvedLimit, dateRange));
         } else {
             List<TrackingSquad> squads = getAllSquads();
             for (TrackingSquad squad : squads) {
-                items.add(buildDashboardItem(squad, resolvedLimit));
+                items.add(buildDashboardItem(squad, resolvedLimit, dateRange));
             }
         }
 
@@ -273,17 +277,39 @@ public class TrackingService {
         return PageRequest.of(0, resolvedLimit, Sort.by(Sort.Direction.DESC, "timestamp"));
     }
 
-    private TrackingDashboardItemDto buildDashboardItem(TrackingSquad squad, int activityLimit) {
+    private TrackingDashboardItemDto buildDashboardItem(TrackingSquad squad, int activityLimit, Instant[] dateRange) {
         TrackingDashboardItemDto item = new TrackingDashboardItemDto();
         item.setSquad(squad);
         item.setMembers(trackingMemberRepository.findBySquadIdOrderByNameAsc(squad.getId()));
 
-        Page<TrackingActivity> latest = trackingActivityRepository.findBySquadId(
-                squad.getId(),
-                PageRequest.of(0, activityLimit, Sort.by(Sort.Direction.DESC, "timestamp"))
-        );
+        PageRequest pageRequest = PageRequest.of(0, activityLimit, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Page<TrackingActivity> latest = trackingActivityRepository.findBySquadIdAndTimestampBetween(
+                squad.getId(), dateRange[0], dateRange[1], pageRequest);
         item.setLatestActivities(latest.getContent());
         return item;
+    }
+
+    private Instant[] parseDateRange(String dateFrom, String dateTo) {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate from = parseDate(dateFrom, today);
+        LocalDate to = parseDate(dateTo, today);
+        // Ensure from <= to
+        if (from.isAfter(to)) {
+            to = from;
+        }
+        return new Instant[]{
+            from.atStartOfDay(ZoneOffset.UTC).toInstant(),
+            to.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()
+        };
+    }
+
+    private LocalDate parseDate(String date, LocalDate fallback) {
+        if (date == null || date.trim().isEmpty()) return fallback;
+        try {
+            return LocalDate.parse(date.trim());
+        } catch (DateTimeParseException e) {
+            return fallback;
+        }
     }
 
     private int resolveLimit(Integer limit) {

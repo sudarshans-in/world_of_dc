@@ -16,6 +16,7 @@ public class PollingParty {
     private String psName;
     private String partyNo;
     private List<Member> members;
+    private List<Member> policeMembers;
     private String vehicleId;
     private Long uploadTime;
 
@@ -38,6 +39,14 @@ public class PollingParty {
 
     public List<Member> getMembers() { return members; }
     public void setMembers(List<Member> members) { this.members = members; }
+
+    public List<Member> getPoliceMembers() {
+        return policeMembers;
+    }
+
+    public void setPoliceMembers(List<Member> policeMembers) {
+        this.policeMembers = policeMembers;
+    }
 
     public String getVehicleId() { return vehicleId; }
     public void setVehicleId(String vehicleId) { this.vehicleId = vehicleId; }
